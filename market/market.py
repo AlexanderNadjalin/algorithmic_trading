@@ -5,11 +5,21 @@ import pandas as pd
 
 
 class Market:
-    def __init__(self, market_file_name):
+    def __init__(self,
+                 market_file_name: str,
+                 fill_missing_method: str):
+        """
+
+        Market class object.
+        :param market_file_name: File name as string.
+        :param fill_missing_method: Fill missing values method as string.
+        """
         self.config = self.config()
         self.market_file_name = market_file_name
+        self.fill_missing_method = fill_missing_method
         self.data = pd.DataFrame()
         self.read_csv(input_file_name=self.market_file_name)
+        self.data_valid()
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -77,4 +87,58 @@ class Market:
             return True
         else:
             logger.critical('File directory or file name is incorrect. Aborted')
+            quit()
+
+    @logger.catch
+    def data_valid(self) -> None:
+        """
+
+        Check for NaN, empty values and non-floats.
+        Fill missing values.
+        :return: None
+        """
+        cols = list(self.data.columns)
+        emptys = 0
+        nans = 0
+        floats = 0
+        for col in cols:
+            col_emptys = len(self.data[self.data[col] == ''])
+            col_nans = self.data[col].isna().sum()
+            if self.data[col].dtypes != 'float64':
+                floats += 1
+            emptys += col_emptys
+            nans += col_nans
+
+            if col_emptys > 0:
+                logger.warning('Column ' + col + ' has ' + str(col_emptys) + ' number of empty values.')
+                self.fill_missing(col_name=col)
+            if col_nans > 0:
+                logger.warning('Column ' + col + ' has ' + str(col_nans) + ' number of NaN values.')
+            if floats > 0:
+                logger.warning('Column ' + col + ' has one or more non-float values.')
+
+        if (emptys == 0) and (nans == 0) and (floats == 0):
+            logger.info('No empty, NaN or non-float values in imported file.')
+
+    def fill_missing(self,
+                     col_name: str) -> None:
+        """
+
+        Fill missing values in a column of self.data with given method.
+        :param col_name: Column name. Passing "None" does nothing.
+        :return: None.
+        """
+        if self.fill_missing_method == 'forward':
+            self.data[col_name].fillna(method='ffill', inplace=True)
+            logger.info('Column ' + col_name + ' forward-filled.')
+        elif self.fill_missing_method == 'backward':
+            self.data[col_name].fillna(method='bfill', inplace=True)
+            logger.info('Column ' + col_name + ' backward-filled.')
+        elif self.fill_missing_method == 'interpolate':
+            self.data[col_name].interpolate(method='polynomial')
+            logger.info('Column ' + col_name + ' filled by interpolation.')
+        elif self.fill_missing_method is None:
+            pass
+        else:
+            logger.critical('Fill method ' + self.fill_missing_method + ' not implemented. Aborted.')
             quit()
