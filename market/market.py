@@ -5,7 +5,6 @@ import pandas as pd
 
 
 class Market:
-    # TODO Multiple columns per security
     def __init__(self,
                  market_file_name: str,
                  fill_missing_method: str):
@@ -22,6 +21,7 @@ class Market:
         self.read_csv(input_file_name=self.market_file_name)
         self.data_valid()
         self.columns = self.data.columns.to_list()
+        logger.info('Market created.')
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
