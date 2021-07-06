@@ -5,6 +5,7 @@ import pandas as pd
 
 
 class Market:
+    # TODO Multiple columns per security
     def __init__(self,
                  market_file_name: str,
                  fill_missing_method: str):
@@ -20,6 +21,7 @@ class Market:
         self.data = pd.DataFrame()
         self.read_csv(input_file_name=self.market_file_name)
         self.data_valid()
+        self.columns = self.data.columns.to_list()
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -54,7 +56,7 @@ class Market:
 
         if self.file_valid(input_file_path):
             try:
-                raw_data = pd.read_csv(input_file_path, sep=',', parse_dates=['DATE'])
+                raw_data = pd.read_csv(input_file_path, sep=',')
             except ValueError as e:
                 logger.error('File read failed with the following exception:')
                 logger.error('   ' + str(e))
@@ -63,6 +65,7 @@ class Market:
             else:
                 logger.success('Data file "' + input_file_name + '" read.')
 
+        # raw_data['DATE'].apply(lambda x: x.strftime('%Y-%m-%d'))
         raw_data = raw_data.set_index(['DATE'])
 
         self.data = raw_data
@@ -141,4 +144,30 @@ class Market:
             pass
         else:
             logger.critical('Fill method ' + self.fill_missing_method + ' not implemented. Aborted.')
+            quit()
+
+    def select(self,
+               columns: list,
+               start_date: str,
+               end_date: str) -> pd.DataFrame:
+        """
+
+        Select a
+        :param columns: List of column names.
+        :param start_date: Start date (oldest date, included in selection).
+        :param end_date:End date (newest date, included in selection)
+        :return: Pandas dataframe.
+        """
+        if any(item in self.columns for item in columns):
+            if start_date not in self.data.index.values:
+                logger.critical('Selected start date not in market data. Aborted.')
+                quit()
+            if end_date not in self.data.index.values:
+                logger.critical('Selected end date not in market data. Aborted.')
+                quit()
+            mask = (self.data.index.values >= start_date) & (self.data.index.values <= end_date)
+            df = self.data.loc[mask]
+            return df[columns]
+        else:
+            logger.critical('Selected column name not in market data. Aborted.')
             quit()
