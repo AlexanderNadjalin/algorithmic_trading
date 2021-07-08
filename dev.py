@@ -12,7 +12,7 @@ def dev():
     # print(market.select(['XACTOMXS30.ST'], '2021-05-01', '2021-05-06'))
 
     t1 = Transaction(name='AMZ', direction='B', quantity=25.0, price=150.0, commission_scheme='', date='2021-07-07')
-    t2 = Transaction(name='AMZ', direction='S', quantity=15.0, price=151.0, commission_scheme='', date='2021-07-08')
+    t2 = Transaction(name='AMZ', direction='S', quantity=25.0, price=151.0, commission_scheme='', date='2021-07-08')
     t3 = Transaction(name='AMZ', direction='B', quantity=10.0, price=300.0, commission_scheme='avanza_medium', date='2021-07-09')
     t4 = Transaction(name='AMZ', direction='B', quantity=10.0, price=400.0, commission_scheme='avanza_medium', date='2021-07-10')
 
