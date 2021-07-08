@@ -5,7 +5,6 @@ import pandas as pd
 
 
 class Market:
-    # TODO Multiple columns per security
     def __init__(self,
                  market_file_name: str,
                  fill_missing_method: str):
@@ -22,12 +21,13 @@ class Market:
         self.read_csv(input_file_name=self.market_file_name)
         self.data_valid()
         self.columns = self.data.columns.to_list()
+        logger.info('Market created.')
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
         """
 
-        Read config file and return a config object. Used to designate target directories for data and models.
+        Read market_config file and return a config object. Used to designate target directories for data and models.
         Config.ini file is located in project base directory.
 
         :return: A ConfigParser object.
@@ -35,7 +35,7 @@ class Market:
         conf = cp.ConfigParser()
         conf.read('market/market_config.ini')
 
-        logger.success('I/O info read from config.ini file.')
+        logger.success('I/O info read from market_config.ini file.')
 
         return conf
 
