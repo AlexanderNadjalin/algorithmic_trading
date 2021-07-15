@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from loguru import logger
-from portfolio.transaction import Transaction
+from holdings.transaction import Transaction
 
 
 class Position:
@@ -177,12 +177,12 @@ class Position:
     def avg_price(self) -> float:
         """
 
-        Calculate the average price for alla long and short transactions.
+        Calculate the average price for all long and short transactions.
         :return: Average price.
         """
         if self.net_quantity == 0.0:
             return 0.0
-        elif self.net_quantity > 0:
+        elif self.net_quantity >= 0.0:
             return (self.avg_bought * self.buy_quantity + self.buy_commission) / self.buy_quantity
         else:
             return (self.avg_sold * self.sell_quantity - self.sell_commission) / self.sell_quantity
@@ -230,7 +230,7 @@ class Position:
         Calculate total commission for all transactions.
         :return: Total commission.
         """
-        return self.buy_commission + self.sell_quantity
+        return self.buy_commission + self.sell_commission
 
     @property
     def net_incl_commission(self) -> float:

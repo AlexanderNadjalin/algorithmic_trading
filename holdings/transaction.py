@@ -1,6 +1,6 @@
 from loguru import logger
 import datetime as dt
-import portfolio.commission_scheme as cs
+import holdings.commission_scheme as cs
 
 
 class Transaction:
@@ -26,13 +26,13 @@ class Transaction:
         """
         self.name = name
         self.direction = self.validate_direction(direction)
-        self.quantity = abs(quantity)
+        self.quantity = quantity
         self.price = price
         self.commission_scheme = cs.CommissionScheme(commission_scheme)
-        self.commission = self.commission_scheme.calculate_commission(quantity=self.quantity,
+        self.commission = self.commission_scheme.calculate_commission(quantity=abs(self.quantity),
                                                                       price=self.price)
         self.date = self.validate_date_format(date)
-        self.total_cash = self.commission + self.quantity * self.price
+        self.total_cash = self.commission + abs(self.quantity * self.price)
 
     @staticmethod
     def validate_date_format(date):
