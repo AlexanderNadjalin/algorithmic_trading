@@ -1,6 +1,6 @@
 from loguru import logger
 import datetime as dt
-import portfolio.commission_scheme as cs
+import holdings.commission_scheme as cs
 
 
 class Transaction:

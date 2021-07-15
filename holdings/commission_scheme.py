@@ -13,6 +13,9 @@ class CommissionScheme:
         if self.name == 'avanza_medium':
             min_com = 69
             trans_com = quantity * price * 0.00069
-            return min(min_com, trans_com)
+            if min_com <= trans_com:
+                return min_com
+            else:
+                return trans_com
         elif self.name == '':
             return 0.0

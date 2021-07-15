@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from loguru import logger
-from portfolio.transaction import Transaction
+from holdings.transaction import Transaction
 
 
 class Position:
