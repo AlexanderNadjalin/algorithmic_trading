@@ -21,14 +21,11 @@ class PositionHandler:
         """
         security = trans.name
         if security in self.positions:
-            self.positions[security].transact_position(trans)
+            self.positions[security].transact(trans)
         else:
             position = Position()
-            position.transact_position(trans)
+            position.transact(trans)
             self.positions[security] = position
-
-        if self.positions[security].net_quantity == 0:
-            del self.positions[security]
 
     def total_market_value(self) -> float:
         """
@@ -61,3 +58,11 @@ class PositionHandler:
         :return: PnL.
         """
         return sum(pos.total_pnl for asset, pos in self.positions.items())
+
+    def total_commission(self) -> float:
+        """
+
+        Calculate total commission for all positions.
+        :return: Total commission.
+        """
+        return sum(pos.total_commission for asset, pos in self.positions.items())

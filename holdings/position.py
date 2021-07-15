@@ -74,9 +74,9 @@ class Position:
         self.transaction_history = self.transaction_history.append(new_trans,
                                                                    ignore_index=True)
 
-    def transact_position(self,
-                          trans: Transaction,
-                          verbose=False) -> None:
+    def transact(self,
+                 trans: Transaction,
+                 verbose=False) -> None:
         """
 
         Transacts the position with accounting.
