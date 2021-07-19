@@ -9,7 +9,9 @@ from holdings.position_handler import PositionHandler
 class Portfolio:
     """
 
-    Portfolio object. Has information on positions, their market values, cash etc.
+    Portfolio object.
+    Portfolio.history has information on positions, their market values, cash etc.
+    Portfolio.records has calculated metrics, if the metrics.py functions are called.
     """
     def __init__(self,
                  inception_date: str
@@ -21,9 +23,11 @@ class Portfolio:
         self.current_cash = self.init_cash
         self.inception_date = inception_date
         self.current_date = self.inception_date
+        self.benchmark = self.config['benchmark']['benchmark_name']
         self.pf_id = self.config['portfolio_information']['pf_id']
         self.position_handler = PositionHandler()
         self.history = pd.DataFrame()
+        self.records = pd.DataFrame()
         self.create_history_table()
         logger.info('Portfolio ' + self.pf_id + ' created.')
 
@@ -60,7 +64,8 @@ class Portfolio:
             self.position_handler.positions[pos].update_current_market_price(date=date,
                                                                              market_price=price.iloc[0, 0])
         self.current_date = date
-        self.add_history(date=date)
+        self.add_history(date=date,
+                         market_data=market_data)
 
         for pos in self.position_handler.positions:
             if self.position_handler.positions[pos].net_quantity == 0:
@@ -72,29 +77,54 @@ class Portfolio:
         Create pd.Dataframe to hold daily values of portfolio.
         :return: None.
         """
-        self.history = pd.DataFrame(columns=['current_date',
-                                             'current_cash',
-                                             'total_commission',
-                                             'realized_pnl',
-                                             'unrealized_pnl',
-                                             'total_pnl',
-                                             'total_market_value'])
+        if self.benchmark != '':
+            self.history = pd.DataFrame(columns=['current_date',
+                                                 'current_cash',
+                                                 'total_commission',
+                                                 'realized_pnl',
+                                                 'unrealized_pnl',
+                                                 'total_pnl',
+                                                 'total_market_value',
+                                                 'benchmark_value'])
+        else:
+            self.history = pd.DataFrame(columns=['current_date',
+                                                 'current_cash',
+                                                 'total_commission',
+                                                 'realized_pnl',
+                                                 'unrealized_pnl',
+                                                 'total_pnl',
+                                                 'total_market_value'])
 
     def add_history(self,
-                    date: str) -> None:
+                    date: str,
+                    market_data: Market) -> None:
         """
 
         Add portfolio values for a specific date to history.
         :param date: Date to add to portfolio history.
+        :param market_data: Market data for benchmark values.
         :return:
         """
-        new_trans = {'current_date': date,
-                     'current_cash': self.current_cash,
-                     'total_commission': self.total_commission,
-                     'realized_pnl': self.total_realized_pnl,
-                     'unrealized_pnl': self.total_unrealized_pnl,
-                     'total_pnl': self.total_pnl,
-                     'total_market_value': self.total_market_value}
+        if self.benchmark != '':
+            bm_value = market_data.select(columns=[self.benchmark],
+                                          start_date=self.current_date,
+                                          end_date=self.current_date).iloc[0, 0]
+            new_trans = {'current_date': date,
+                         'current_cash': self.current_cash,
+                         'total_commission': self.total_commission,
+                         'realized_pnl': self.total_realized_pnl,
+                         'unrealized_pnl': self.total_unrealized_pnl,
+                         'total_pnl': self.total_pnl,
+                         'total_market_value': self.total_market_value,
+                         'benchmark_value': bm_value}
+        else:
+            new_trans = {'current_date': date,
+                         'current_cash': self.current_cash,
+                         'total_commission': self.total_commission,
+                         'realized_pnl': self.total_realized_pnl,
+                         'unrealized_pnl': self.total_unrealized_pnl,
+                         'total_pnl': self.total_pnl,
+                         'total_market_value': self.total_market_value}
 
         self.history = self.history.append(new_trans,
                                            ignore_index=True)
