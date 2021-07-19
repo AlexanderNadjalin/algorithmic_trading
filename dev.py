@@ -1,7 +1,8 @@
 from market.market import Market
 from holdings.transaction import Transaction
-from holdings.position import Position
 from holdings.portfolio import Portfolio
+from event import event, event_handler
+from backtest.backtest import Backtest
 
 
 market_file_ane = 'test_data_ETF.csv'
@@ -38,18 +39,25 @@ def dev():
                      date='2021-05-03')
 
     pf = Portfolio(inception_date='2021-05-03')
-    pf.transact_security(t1)
-    pf.update_all_market_values(date=t1.date,
-                                market_data=market)
 
-    pf.transact_security(t2)
-    pf.update_all_market_values(date=t2.date,
-                                market_data=market)
+    eh = event_handler.EventHandler(market=market,
+                                    pf=pf)
+    e2 = event.Market(date=t1.date)
 
-    pf.transact_security(t3)
-    pf.update_all_market_values(date=t3.date,
-                                market_data=market)
-    print(pf.total_realized_pnl)
+    e1 = event.Transaction(date=t1.date,
+                           trans=t1)
+    eh.put_event(event=e1)
+    # eh.put_event(event=e2)
+    # pf.update_all_market_values(date=t1.date,
+    #                             market_data=market)
+
+    bt = Backtest(eh=eh,
+                  market=market,
+                  pf=pf,
+                  start_date=t1.date,
+                  end_date=t2.date)
+    bt.run()
+
     pass
 
 
