@@ -152,7 +152,7 @@ class Market:
                end_date: str) -> pd.DataFrame:
         """
 
-        Select a
+        Select a subset of market data between start_date and end_date.
         :param columns: List of column names.
         :param start_date: Start date (oldest date, included in selection).
         :param end_date:End date (newest date, included in selection)
@@ -171,3 +171,10 @@ class Market:
         else:
             logger.critical('Selected column name not in market data. Aborted.')
             quit()
+
+    def date_from_index(self,
+                        current_date: str,
+                        index_loc: int) -> str:
+        mask = (self.data.index.values >= current_date)
+        df = self.data.loc[mask]
+        date = df.iloc[index_loc]
