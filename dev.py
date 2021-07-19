@@ -3,6 +3,7 @@ from holdings.transaction import Transaction
 from holdings.portfolio import Portfolio
 from event import event, event_handler
 from backtest.backtest import Backtest
+from metric.metric import Metric
 
 
 market_file_ane = 'test_data_ETF.csv'
@@ -55,8 +56,14 @@ def dev():
                   market=market,
                   pf=pf,
                   start_date=t1.date,
-                  end_date=t2.date)
+                  end_date='2021-05-31')
     bt.run()
+
+    m = Metric()
+    m.calc_returns(pf=bt.pf)
+    m.create_drawdowns(pf=bt.pf)
+    m.create_rolling_sharpe_ratio(pf=bt.pf)
+    m.create_rolling_beta(pf=bt.pf)
 
     pass
 
