@@ -11,7 +11,8 @@ class Backtest:
                  market: Market,
                  pf: Portfolio,
                  start_date: str,
-                 end_date: str):
+                 end_date: str,
+                 verbose=False):
         self.event_handler = event_handler.EventHandler(market=market,
                                                         pf=pf)
         self.cont_backtest = True
@@ -53,23 +54,17 @@ class Backtest:
 
                 # Infinite inner loop for handling events
                 while not self.eh.is_empty():
-                    self.eh.handle_event(verbose=True)
+                    self.eh.handle_event()
 
                 e = event.Market(date=self.current_date)
                 self.eh.put_event(e)
-                self.eh.handle_event(verbose=True)
+                self.eh.handle_event()
 
                 self.current_index += 1
-                self.current_date = self.market.data.iloc[self.current_index, :].to_frame().transpose().index.values[0]
-
                 if self.current_index > self.end_index:
                     self.cont_backtest = False
                     logger.success('Backtest completed.')
-                # else:
-                #     e = event.Market(date=self.current_date)
-                #     self.eh.put_event(event=e)
-
+                else:
+                    self.current_date = self.market.data.iloc[self.current_index, :].to_frame().transpose().index.values[0]
             else:
                 break
-
-

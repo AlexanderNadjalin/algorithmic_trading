@@ -177,4 +177,5 @@ class Market:
                         index_loc: int) -> str:
         mask = (self.data.index.values >= current_date)
         df = self.data.loc[mask]
-        date = df.iloc[index_loc]
+        date = df.iloc[[index_loc]].index.values[0]
+        return date

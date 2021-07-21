@@ -7,10 +7,12 @@ from holdings.portfolio import Portfolio, Transaction
 class EventHandler:
     def __init__(self,
                  market: Market,
-                 pf: Portfolio):
+                 pf: Portfolio.config,
+                 verbose=False):
         self.event_queue = queue.Queue()
         self.market = market
         self.pf = pf
+        self.verbose = verbose
 
     def put_event(self,
                   event):
@@ -22,16 +24,15 @@ class EventHandler:
     def is_empty(self):
         return self.event_queue.empty()
 
-    def handle_event(self,
-                     verbose=False):
+    def handle_event(self):
         e = self.get_event()
         if e.type == 'MARKET':
             self.pf.update_all_market_values(date=e.date,
                                              market_data=self.market)
-            if verbose:
+            if self.verbose:
                 logger.info(e.details)
 
         elif e.type == 'TRANSACTION':
             self.pf.transact_security(trans=e.trans)
-            if verbose:
+            if self.verbose:
                 logger.info(e.details)

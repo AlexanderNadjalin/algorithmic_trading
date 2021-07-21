@@ -35,9 +35,10 @@ class Metric:
         :param pf: Portfolio for which to calculate returns.
         :return: None.
         """
-        pf.records['pf_1d_pct_rets'] = pf.history['total_market_value'].pct_change()
+        pf.records = pf.history.copy()
+        pf.records['pf_1d_pct_rets'] = pf.records['total_market_value'].pct_change()
         col_idx = pf.records.columns.get_loc('pf_1d_pct_rets')
-        pf.records.iloc[0, col_idx] = pf.history['total_market_value'].iloc[0] / pf.init_cash - 1
+        pf.records.iloc[0, col_idx] = pf.records['total_market_value'].iloc[0] / pf.init_cash - 1
         pf.records['pf_cum_rets'] = np.cumprod(1 + pf.records['pf_1d_pct_rets']) - 1
         pf.records.loc[:, 'pf_cum_rets'] *= 100
 
@@ -45,11 +46,12 @@ class Metric:
         if pf.benchmark == '':
             pass
         else:
-            pf.records['bm_1d_pct_rets'] = pf.history['benchmark_value'].pct_change()
+            pf.records['bm_1d_pct_rets'] = pf.records['benchmark_value'].pct_change()
             col_idx = pf.records.columns.get_loc('bm_1d_pct_rets')
             pf.records.iloc[0, col_idx] = 0
             pf.records['bm_cum_rets'] = np.cumprod(1 + pf.records['bm_1d_pct_rets']) - 1
             pf.records.loc[:, 'bm_cum_rets'] *= 100
+        pf.records.set_index('current_date', inplace=True)
         pf.records.fillna(0, inplace=True)
 
     @staticmethod
@@ -135,3 +137,10 @@ class Metric:
             pf.records.fillna(0, inplace=True)
         else:
             logger.warning('No benchmark selected for portfolio ' + pf.pf_id + '. Rolling beta not calculated.')
+
+    def calc_all(self,
+                 pf: Portfolio):
+        self.calc_returns(pf=pf)
+        self.create_drawdowns(pf=pf)
+        self.create_rolling_sharpe_ratio(pf=pf)
+        self.create_rolling_beta(pf=pf)

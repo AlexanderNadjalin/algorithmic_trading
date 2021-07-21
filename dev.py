@@ -4,6 +4,7 @@ from holdings.portfolio import Portfolio
 from event import event, event_handler
 from backtest.backtest import Backtest
 from metric.metric import Metric
+from plot.plot import Plot
 
 
 market_file_ane = 'test_data_ETF.csv'
@@ -15,7 +16,7 @@ def dev():
 
     t1 = Transaction(name='XACTOMXS30.ST',
                      direction='B',
-                     quantity=10.0,
+                     quantity=100.0,
                      price=286.85,
                      commission_scheme='avanza_small',
                      date='2021-05-03')
@@ -56,15 +57,19 @@ def dev():
                   market=market,
                   pf=pf,
                   start_date=t1.date,
-                  end_date='2021-05-31')
+                  end_date='2021-07-02')
     bt.run()
 
-    m = Metric()
-    m.calc_returns(pf=bt.pf)
-    m.create_drawdowns(pf=bt.pf)
-    m.create_rolling_sharpe_ratio(pf=bt.pf)
-    m.create_rolling_beta(pf=bt.pf)
+    g = bt.market.date_from_index('2021-05-03', 3)
 
+    m = Metric()
+    m.calc_all(bt.pf)
+
+    p = Plot(pf=bt.pf,
+             cols=['pf_cum_rets', 'bm_cum_rets'])
+    p.returns_plot(x_labels=['Date'],
+                   y_labels=['Returns (%)'],
+                   titles=['Portfolio', 'Benchmark'])
     pass
 
 
