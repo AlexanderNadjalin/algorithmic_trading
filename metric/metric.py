@@ -24,7 +24,7 @@ class Metric:
         conf = cp.ConfigParser()
         conf.read('metric/metric_config.ini')
 
-        logger.success('Info read from metric_config.ini file.')
+        logger.info('Info read from metric_config.ini file.')
 
         return conf
 
@@ -139,8 +139,15 @@ class Metric:
             logger.warning('No benchmark selected for portfolio ' + pf.pf_id + '. Rolling beta not calculated.')
 
     def calc_all(self,
-                 pf: Portfolio):
+                 pf: Portfolio) -> None:
+        """
+
+        Calculate all metrics.
+        :param pf: Portfolio object.
+        :return: None.
+        """
         self.calc_returns(pf=pf)
         self.create_drawdowns(pf=pf)
         self.create_rolling_sharpe_ratio(pf=pf)
         self.create_rolling_beta(pf=pf)
+        logger.success('Metrics calculated for backtest: returns, drawdowns, rolling Sharpe ratio and rolling beta.')

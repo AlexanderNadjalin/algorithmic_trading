@@ -4,6 +4,11 @@ from holdings.portfolio import Portfolio
 
 
 class Plot:
+    """
+
+    Plot object to visualize different metrics.
+    Requires that Metric.calc_all() method has been run.
+    """
     def __init__(self,
                  pf: Portfolio,
                  cols: list):
@@ -16,7 +21,14 @@ class Plot:
                      x_labels: list,
                      y_labels: list,
                      titles: list) -> None:
+        """
 
+        Single plot for maximum two time series.
+        :param x_labels: X-axis label name(s).
+        :param y_labels: Y-axis label name(s).
+        :param titles: Title for plot.
+        :return: None.
+        """
         fig, ax = plt.subplots(figsize=(10, 7))
 
         self.records.iloc[:, self.cols[0]].plot(lw=1,

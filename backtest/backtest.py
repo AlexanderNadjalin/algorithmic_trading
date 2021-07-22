@@ -3,9 +3,14 @@ from event import event, event_handler
 from market.market import Market
 from holdings.portfolio import Portfolio
 from event.event_handler import EventHandler
+from metric.metric import Metric
 
 
 class Backtest:
+    """
+
+    Main backtest class. Holds a Portfolio, Market and Metric object.
+    """
     def __init__(self,
                  eh: EventHandler,
                  market: Market,
@@ -19,6 +24,8 @@ class Backtest:
         self.eh = eh
         self.market = market
         self.pf = pf
+        self.verbose = verbose
+        self.metric = Metric()
 
         self.start_date = start_date
         self.start_index = self.market.data.index.get_loc(self.start_date)
@@ -46,6 +53,11 @@ class Backtest:
             quit()
 
     def run(self) -> None:
+        """
+
+        Runs the backtest as an infinite outer loop for handling dates, and an inner loop for handling events.
+        :return: None.
+        """
         logger.info('Backtest running from ' + self.start_date + ' to ' + self.end_date + '.')
 
         # Infinite outer loop for handling each date in backtest period
@@ -61,7 +73,12 @@ class Backtest:
                 self.eh.handle_event()
 
                 self.current_index += 1
+
+                # End backtest when end_date is reached.
                 if self.current_index > self.end_index:
+                    # Calculate metrics.
+                    self.metric.calc_all(self.pf)
+
                     self.cont_backtest = False
                     logger.success('Backtest completed.')
                 else:

@@ -60,11 +60,6 @@ def dev():
                   end_date='2021-07-02')
     bt.run()
 
-    g = bt.market.date_from_index('2021-05-03', 3)
-
-    m = Metric()
-    m.calc_all(bt.pf)
-
     p = Plot(pf=bt.pf,
              cols=['pf_cum_rets', 'bm_cum_rets'])
     p.returns_plot(x_labels=['Date'],

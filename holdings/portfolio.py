@@ -29,7 +29,7 @@ class Portfolio:
         self.history = pd.DataFrame()
         self.records = pd.DataFrame()
         self.create_history_table()
-        logger.info('Portfolio ' + self.pf_id + ' created.')
+        logger.success('Portfolio ' + self.pf_id + ' created.')
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -42,7 +42,7 @@ class Portfolio:
         conf = cp.ConfigParser()
         conf.read('holdings/portfolio_config.ini')
 
-        logger.success('Info read from portfolio_config.ini file.')
+        logger.info('Info read from portfolio_config.ini file.')
 
         return conf
 
