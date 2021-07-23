@@ -53,6 +53,7 @@ class Metric:
             pf.records.loc[:, 'bm_cum_rets'] *= 100
         pf.records.set_index('current_date', inplace=True)
         pf.records.fillna(0, inplace=True)
+        logger.info('Metrics calculated for returns.')
 
     @staticmethod
     def create_drawdowns(pf: Portfolio):
@@ -79,6 +80,7 @@ class Metric:
         pf.records['duration'] = duration
         pf.records['drawdown'].fillna(0, inplace=True)
         pf.records['duration'].fillna(0, inplace=True)
+        logger.info('Metrics calculated for drawdowns.')
 
     def create_rolling_sharpe_ratio(self,
                                     pf: Portfolio) -> None:
@@ -88,25 +90,32 @@ class Metric:
         :return: None.
         """
         period = int(self.config['rolling_sharpe_ratio']['period'])
-
-        # equity TimeSeries only
-        eq_rets = pf.records['pf_1d_pct_rets']
-        eq_rolling = eq_rets.rolling(window=period)
-        eq_rolling_sharpe = np.sqrt(period) * eq_rolling.mean() / eq_rolling.std()
-        eq_rolling_sharpe.fillna(0, inplace=True)
-        pf.records['pf_sharpe_ratio'] = eq_rolling_sharpe
-
-        # benchmark TimeSeries included
-        if pf.benchmark != '':
-            bm_rets = pf.records['bm_1d_pct_rets']
-            bm_rolling = bm_rets.rolling(window=period)
-            bm_rolling_sharpe = np.sqrt(period) * bm_rolling.mean() / bm_rolling.std()
-            bm_rolling_sharpe.fillna(0, inplace=True)
-            pf.records['bm_sharpe_ratio'] = bm_rolling_sharpe
+        if len(pf.records.index) < period:
+            data_len = len(pf.records.index)
+            logger.warning('Chosen backtesting period has ' + str(data_len) +
+                           ' data points. Rolling Sharpe ratio needs ' + str(period) +
+                           ' data points. Adjust backtesting dates or period parameter in backtest_config.ini')
         else:
-            logger.warning('No benchmark selected for portfolio ' + pf.pf_id + '. Rolling Sharpe ratio not calculated.')
+            # equity TimeSeries only
+            eq_rets = pf.records['pf_1d_pct_rets']
+            eq_rolling = eq_rets.rolling(window=period)
+            eq_rolling_sharpe = np.sqrt(period) * eq_rolling.mean() / eq_rolling.std()
+            eq_rolling_sharpe.fillna(0, inplace=True)
+            pf.records['pf_sharpe_ratio'] = eq_rolling_sharpe
 
-        pf.records.fillna(0, inplace=True)
+            # benchmark TimeSeries included
+            if pf.benchmark != '':
+                bm_rets = pf.records['bm_1d_pct_rets']
+                bm_rolling = bm_rets.rolling(window=period)
+                bm_rolling_sharpe = np.sqrt(period) * bm_rolling.mean() / bm_rolling.std()
+                bm_rolling_sharpe.fillna(0, inplace=True)
+                pf.records['bm_sharpe_ratio'] = bm_rolling_sharpe
+                logger.info('Metrics calculated for rolling Sharpe ratio.')
+            else:
+                logger.warning('No benchmark selected for portfolio ' + pf.pf_id +
+                               '. Rolling Sharpe ratio not calculated.')
+
+            pf.records.fillna(0, inplace=True)
 
     def create_rolling_beta(self,
                             pf: Portfolio) -> None:
@@ -117,26 +126,33 @@ class Metric:
         :return: None.
         """
         period = int(self.config['rolling_beta']['period'])
-
-        if pf.benchmark != '':
-            pf_idx = pf.history.columns.get_loc('total_market_value')
-            bm_idx = pf.history.columns.get_loc('benchmark_value')
-            pf_ = pf.history.iloc[:, pf_idx]
-            bm_ = pf.history.iloc[:, bm_idx]
-            roll_pf = pf_.rolling(window=period)
-            roll_bm = bm_.rolling(window=period)
-            roll_var = roll_pf.var()
-            roll_cov = roll_pf.cov(roll_bm)
-
-            # Periods longer than "period" of no variance makes for division by zero. Floor to low non-zero value.
-            roll_var = roll_var.apply(lambda x: x if x > 1.e-05 else 0.00001)
-            rolling_beta = roll_cov / roll_var
-            rolling_beta.dropna(inplace=True)
-            pf.records['rolling_beta'] = rolling_beta
-
-            pf.records.fillna(0, inplace=True)
+        if len(pf.records.index) < period:
+            data_len = len(pf.records.index)
+            logger.warning('Chosen backtesting period has ' + str(data_len) +
+                           ' data points. Rolling beta needs ' + str(period) +
+                           ' data points. Adjust backtesting dates or period parameter in backtest_config.ini')
         else:
-            logger.warning('No benchmark selected for portfolio ' + pf.pf_id + '. Rolling beta not calculated.')
+            if pf.benchmark != '':
+                pf_idx = pf.history.columns.get_loc('total_market_value')
+                bm_idx = pf.history.columns.get_loc('benchmark_value')
+                pf_ = pf.history.iloc[:, pf_idx]
+                bm_ = pf.history.iloc[:, bm_idx]
+                roll_pf = pf_.rolling(window=period)
+                roll_bm = bm_.rolling(window=period)
+                roll_var = roll_pf.var()
+                roll_cov = roll_pf.cov(roll_bm)
+
+                # Periods longer than "period" of no variance makes for division by zero. Floor to low non-zero value.
+                roll_var = roll_var.apply(lambda x: x if x > 1.e-05 else 0.00001)
+                rolling_beta = roll_cov / roll_var
+                rolling_beta.dropna(inplace=True)
+                pf.records['rolling_beta'] = rolling_beta
+
+                pf.records.fillna(0, inplace=True)
+
+                logger.info('Metrics calculated for rolling beta.')
+            else:
+                logger.warning('No benchmark selected for portfolio ' + pf.pf_id + '. Rolling beta not calculated.')
 
     def calc_all(self,
                  pf: Portfolio) -> None:
@@ -150,4 +166,3 @@ class Metric:
         self.create_drawdowns(pf=pf)
         self.create_rolling_sharpe_ratio(pf=pf)
         self.create_rolling_beta(pf=pf)
-        logger.success('Metrics calculated for backtest: returns, drawdowns, rolling Sharpe ratio and rolling beta.')

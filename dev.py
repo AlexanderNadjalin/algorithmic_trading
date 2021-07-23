@@ -17,9 +17,9 @@ def dev():
     t1 = Transaction(name='XACTOMXS30.ST',
                      direction='B',
                      quantity=100.0,
-                     price=286.85,
+                     price=223.5,
                      commission_scheme='avanza_small',
-                     date='2021-05-03')
+                     date='2020-02-03')
     t2 = Transaction(name='XACTOMXS30.ST',
                      direction='B',
                      quantity=10.0,
@@ -60,11 +60,8 @@ def dev():
                   end_date='2021-07-02')
     bt.run()
 
-    p = Plot(pf=bt.pf,
-             cols=['pf_cum_rets', 'bm_cum_rets'])
-    p.returns_plot(x_labels=['Date'],
-                   y_labels=['Returns (%)'],
-                   titles=['Portfolio', 'Benchmark'])
+    p = Plot(bt=bt)
+    p.drawdowns_plot()
     pass
 
 

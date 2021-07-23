@@ -1,4 +1,5 @@
 from loguru import logger
+import configparser as cp
 from event import event, event_handler
 from market.market import Market
 from holdings.portfolio import Portfolio
@@ -18,6 +19,8 @@ class Backtest:
                  start_date: str,
                  end_date: str,
                  verbose=False):
+        self.config = self.config()
+
         self.event_handler = event_handler.EventHandler(market=market,
                                                         pf=pf)
         self.cont_backtest = True
@@ -37,6 +40,21 @@ class Backtest:
 
         self.validate_date(date=self.start_date)
         self.validate_date(date=self.end_date)
+
+    @logger.catch
+    def config(self) -> cp.ConfigParser:
+        """
+
+        Read backtest_config file and return a config object. Used to set default parameters for backtesting objects.
+
+        :return: A ConfigParser object.
+        """
+        conf = cp.ConfigParser()
+        conf.read('backtest/backtest_config.ini')
+
+        logger.info('Info read from backtest_config.ini file.')
+
+        return conf
 
     def validate_date(self,
                       date: str) -> bool:
