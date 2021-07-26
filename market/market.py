@@ -21,7 +21,7 @@ class Market:
         self.read_csv(input_file_name=self.market_file_name)
         self.data_valid()
         self.columns = self.data.columns.to_list()
-        logger.info('Market created.')
+        logger.success('Market created.')
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -35,7 +35,7 @@ class Market:
         conf = cp.ConfigParser()
         conf.read('market/market_config.ini')
 
-        logger.success('I/O info read from market_config.ini file.')
+        logger.info('I/O info read from market_config.ini file.')
 
         return conf
 
@@ -63,7 +63,7 @@ class Market:
                 logger.info('Aborted.')
                 quit()
             else:
-                logger.success('Data file "' + input_file_name + '" read.')
+                logger.info('Data file "' + input_file_name + '" read.')
 
         # raw_data['DATE'].apply(lambda x: x.strftime('%Y-%m-%d'))
         raw_data = raw_data.set_index(['DATE'])
@@ -177,4 +177,5 @@ class Market:
                         index_loc: int) -> str:
         mask = (self.data.index.values >= current_date)
         df = self.data.loc[mask]
-        date = df.iloc[index_loc]
+        date = df.iloc[[index_loc]].index.values[0]
+        return date
