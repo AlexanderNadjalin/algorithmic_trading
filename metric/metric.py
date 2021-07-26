@@ -66,7 +66,7 @@ class Metric:
         :return: None.
         """
         high_water_mark = [0]
-        equity_curve = pf.history['total_market_value']
+        equity_curve = pf.records['total_market_value']
         eq_idx = pf.records.index
         drawdown = pd.Series(index=eq_idx)
         duration = pd.Series(index=eq_idx)
@@ -133,10 +133,10 @@ class Metric:
                            ' data points. Adjust backtesting dates or period parameter in backtest_config.ini')
         else:
             if pf.benchmark != '':
-                pf_idx = pf.history.columns.get_loc('total_market_value')
-                bm_idx = pf.history.columns.get_loc('benchmark_value')
-                pf_ = pf.history.iloc[:, pf_idx]
-                bm_ = pf.history.iloc[:, bm_idx]
+                pf_idx = pf.records.columns.get_loc('pf_1d_pct_rets')
+                bm_idx = pf.records.columns.get_loc('bm_1d_pct_rets')
+                pf_ = pf.records.iloc[:, pf_idx]
+                bm_ = pf.records.iloc[:, bm_idx]
                 roll_pf = pf_.rolling(window=period)
                 roll_bm = bm_.rolling(window=period)
                 roll_var = roll_pf.var()

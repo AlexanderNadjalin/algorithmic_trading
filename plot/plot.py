@@ -1,5 +1,4 @@
 import matplotlib.pyplot as plt
-import pandas as pd
 from loguru import logger
 from backtest.backtest import Backtest
 
@@ -17,46 +16,41 @@ class Plot:
         self.records = bt.pf.records
         self.save_location = bt.config['output_files']['output_file_directory']
 
-    def returns_plot(self,
-                     x_labels: list,
-                     y_labels: list,
-                     titles: list,
-                     save=False) -> None:
+    def rolling_sharpe_beta_plot(self,
+                                 save=False) -> None:
         """
 
-        Single plot for maximum two time series.
-        :param x_labels: X-axis label name(s).
-        :param y_labels: Y-axis label name(s).
-        :param titles: Title for plot.
-        :param save: True to save to file.
+        Dual plot with rolling Sharpe ratio above, and rolling beta below.
+        :param save: True ito save to file.
         :return: None.
         """
-        fig, ax = plt.subplots(figsize=(10, 7))
+        p1 = self.records.columns.get_loc('pf_sharpe_ratio')
+        p2 = self.records.columns.get_loc('rolling_beta')
 
-        self.records.iloc[:, self.cols[0]].plot(lw=1,
-                                                color='black',
-                                                alpha=0.60,
-                                                ax=ax,
-                                                label=titles[0])
-        if self.cols[1]:
-            self.records.iloc[:, self.cols[1]].plot(lw=1,
-                                                    color='green',
-                                                    alpha=0.60,
-                                                    ax=ax,
-                                                    label=titles[1])
+        title_sharpe = 'Rolling ' + str(self.bt.metric.config['rolling_sharpe_ratio']['period']) + ' days Sharpe ratio'
+        title_beta = 'Rolling ' + str(self.bt.metric.config['rolling_beta']['period']) + ' days Beta'
 
-        ax.set_ylabel(y_labels[0])
-        ax.set_xlabel(x_labels[0])
-        ax.set_title(titles[0])
+        fig, axes = plt.subplots(2, 1, figsize=(10, 7))
+        ax1 = plt.subplot(211)
+        ax2 = plt.subplot(212)
 
-        self.plot_look(ax=ax,
+        self.bt.pf.records.iloc[:, p1].plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Sharpe ratio')
+        self.bt.pf.records.iloc[:, p2].plot(lw=1, color='green', alpha=0.60, ax=ax2, label='Beta')
+
+        ax1.set_xlabel('Date')
+        ax1.set_title(title_sharpe)
+        self.plot_look(ax=ax1,
+                       look_nr=1)
+
+        ax2.set_title(title_beta)
+        self.plot_look(ax=ax2,
                        look_nr=1)
 
         fig.tight_layout()
         plt.show()
 
         if save:
-            self.save_plot(name=self.bt.pf.pf_id + '_returns.png',
+            self.save_plot(name=self.bt.pf.pf_id + 'rolling_sharpe_beta_plot.png',
                            fig=fig)
 
     def drawdowns_plot(self,
@@ -64,6 +58,7 @@ class Plot:
         """
 
         Dual plot with cumulative portfolio returns and benchmark returns above, and drawdowns below.
+        Includes portfolio and benchmark returns of ver backtest period, and maximum drawdown duration.
         :param save: True to save to file.
         :return: None
         """
@@ -71,7 +66,7 @@ class Plot:
         p2 = self.bt.pf.records.columns.get_loc('bm_cum_rets')
         p3 = self.records.columns.get_loc('drawdown')
 
-        title_dd = 'Drawdowns (maximum duration: ' + str(self.records['duration'].max()) + ' days)'
+        title_dd = 'Drawdowns (maximum duration: ' + str(int(self.records['duration'].max())) + ' days)'
 
         fig, axes = plt.subplots(2, 1, figsize=(10, 7))
         ax1 = plt.subplot(211)
@@ -82,11 +77,16 @@ class Plot:
         self.bt.pf.records.iloc[:, p3].plot(lw=1, color='black', alpha=0.60, ax=ax2, label='Drawdowns')
 
         ax1.set_xlabel('Date')
-        ax1.set_title('Cumulative returns')
+        ax1.set_ylabel('%')
+        pf_tot_rets = str(format(self.records['pf_cum_rets'].iloc[-1], ".2f"))
+        bm_tot_rets = str(format(self.records['bm_cum_rets'].iloc[-1], ".2f"))
+        title_str = 'Cumulative returns (Portfolio: ' + pf_tot_rets + '%, Benchmark: ' + bm_tot_rets + '%)'
+        ax1.set_title(title_str)
         self.plot_look(ax=ax1,
                        look_nr=1)
 
         ax2.set_xlabel('Date')
+        ax2.set_ylabel('%')
         ax2.set_title(title_dd)
         self.plot_look(ax=ax2,
                        look_nr=1)
@@ -96,46 +96,6 @@ class Plot:
 
         if save:
             self.save_plot(name=self.bt.pf.pf_id + 'drawdown_plot.png',
-                           fig=fig)
-
-    def dual_plot(self,
-                  x_labels: list,
-                  y_labels: list,
-                  titles: list,
-                  save=False) -> None:
-        """
-        Plots two plots. Generic function to be used with various time series contents.
-        :param x_labels: Labels for x-axis.
-        :param y_labels: Labels for y-axis.
-        :param titles: Titles for plots.
-        :param save: True to save to file.
-        :return: None.
-        """
-
-        fig, axes = plt.subplots(2, 1, figsize=(10, 7))
-        ax1 = plt.subplot(211)
-        ax2 = plt.subplot(212)
-
-        self.bt.pf.records.iloc[:, self.cols[0]].plot(lw=1, color='black', alpha=0.60, ax=ax1, label=titles[0])
-        self.bt.pf.records.iloc[:, self.cols[1]].plot(lw=1, color='green', alpha=0.60, ax=ax2, label=titles[1])
-
-        ax1.set_ylabel(y_labels[0])
-        ax1.set_xlabel(x_labels[0])
-        ax1.set_title(titles[0])
-        self.plot_look(ax=ax1,
-                       look_nr=1)
-
-        ax2.set_ylabel(y_labels[1])
-        ax2.set_xlabel(x_labels[1])
-        ax2.set_title(titles[1])
-        self.plot_look(ax=ax2,
-                       look_nr=1)
-
-        fig.tight_layout()
-        plt.show()
-
-        if save:
-            self.save_plot(name=self.bt.pf.pf_id + 'dual_plot.png',
                            fig=fig)
 
     @staticmethod

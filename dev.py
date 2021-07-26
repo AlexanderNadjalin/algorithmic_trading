@@ -16,10 +16,10 @@ def dev():
 
     t1 = Transaction(name='XACTOMXS30.ST',
                      direction='B',
-                     quantity=100.0,
-                     price=223.5,
+                     quantity=500.0,
+                     price=166.4,
                      commission_scheme='avanza_small',
-                     date='2020-02-03')
+                     date='2020-03-16')
     t2 = Transaction(name='XACTOMXS30.ST',
                      direction='B',
                      quantity=10.0,
@@ -61,7 +61,7 @@ def dev():
     bt.run()
 
     p = Plot(bt=bt)
-    p.drawdowns_plot()
+    p.rolling_sharpe_beta_plot()
     pass
 
 

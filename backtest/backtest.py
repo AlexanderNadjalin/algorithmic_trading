@@ -31,15 +31,17 @@ class Backtest:
         self.metric = Metric()
 
         self.start_date = start_date
-        self.start_index = self.market.data.index.get_loc(self.start_date)
         self.end_date = end_date
+        self.validate_date(date=self.start_date)
+        self.validate_date(date=self.end_date)
+        self.start_index = self.market.data.index.get_loc(self.start_date)
+
         self.end_index = self.market.data.index.get_loc(self.end_date)
 
         self.current_date = self.start_date
         self.current_index = self.start_index
 
-        self.validate_date(date=self.start_date)
-        self.validate_date(date=self.end_date)
+
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
