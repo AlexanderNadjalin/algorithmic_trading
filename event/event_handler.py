@@ -1,17 +1,14 @@
 import queue
 from loguru import logger
-from market.market import Market
-from holdings.portfolio import Portfolio, Transaction
+from backtest.backtest import Backtest
 
 
 class EventHandler:
     def __init__(self,
-                 market: Market,
-                 pf: Portfolio.config,
+                 bt: Backtest,
                  verbose=False):
         self.event_queue = queue.Queue()
-        self.market = market
-        self.pf = pf
+        self.bt = bt
         self.verbose = verbose
 
     def put_event(self,
@@ -27,12 +24,20 @@ class EventHandler:
     def handle_event(self):
         e = self.get_event()
         if e.type == 'MARKET':
-            self.pf.update_all_market_values(date=e.date,
-                                             market_data=self.market)
+            self.bt.pf.update_all_market_values(date=e.date,
+                                                market_data=self.bt.market)
             if self.verbose:
                 logger.info(e.details)
 
+        if e.type == 'CALCSIGNAL':
+            df = self.bt.market.select(columns=self.bt.pf.symbols,
+                                       start_date=e.date,
+                                       end_date=e.date)
+
+        if self.verbose:
+            logger.info(e.details)
+
         elif e.type == 'TRANSACTION':
-            self.pf.transact_security(trans=e.trans)
+            self.bt.pf.transact_security(trans=e.trans)
             if self.verbose:
                 logger.info(e.details)

@@ -27,9 +27,6 @@ class Plot:
         p1 = self.records.columns.get_loc('pf_sharpe_ratio')
         p2 = self.records.columns.get_loc('rolling_beta')
 
-        title_sharpe = 'Rolling ' + str(self.bt.metric.config['rolling_sharpe_ratio']['period']) + ' days Sharpe ratio'
-        title_beta = 'Rolling ' + str(self.bt.metric.config['rolling_beta']['period']) + ' days Beta'
-
         fig, axes = plt.subplots(2, 1, figsize=(10, 7))
         ax1 = plt.subplot(211)
         ax2 = plt.subplot(212)
@@ -37,8 +34,16 @@ class Plot:
         self.bt.pf.records.iloc[:, p1].plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Sharpe ratio')
         self.bt.pf.records.iloc[:, p2].plot(lw=1, color='green', alpha=0.60, ax=ax2, label='Beta')
 
+        # Include strategy name in title
+        title_sharpe = 'Rolling ' + str(self.bt.metric.config['rolling_sharpe_ratio']['period']) + ' days Sharpe ratio'
+        title_beta = 'Rolling ' + str(self.bt.metric.config['rolling_beta']['period']) + ' days Beta'
+        if self.bt.strategy.name == 'Periodic re-balancing':
+            title_strat = 'Strategy: ' + self.bt.strategy.name + ' ' + self.bt.strategy.p
+        else:
+            title_strat = 'Strategy: ' + self.bt.strategy.name
+        ax1.set_title(title_sharpe + '\n' + title_strat)
+
         ax1.set_xlabel('Date')
-        ax1.set_title(title_sharpe)
         self.plot_look(ax=ax1,
                        look_nr=1)
 
@@ -80,8 +85,15 @@ class Plot:
         ax1.set_ylabel('%')
         pf_tot_rets = str(format(self.records['pf_cum_rets'].iloc[-1], ".2f"))
         bm_tot_rets = str(format(self.records['bm_cum_rets'].iloc[-1], ".2f"))
+
+        # Include strategy name in title
         title_str = 'Cumulative returns (Portfolio: ' + pf_tot_rets + '%, Benchmark: ' + bm_tot_rets + '%)'
-        ax1.set_title(title_str)
+        if self.bt.strategy.name == 'Periodic re-balancing':
+            title_strat = 'Strategy: ' + self.bt.strategy.name + ' ' + self.bt.strategy.p
+        else:
+            title_strat = 'Strategy: ' + self.bt.strategy.name
+        ax1.set_title(title_str + '\n' + title_strat)
+
         self.plot_look(ax=ax1,
                        look_nr=1)
 
