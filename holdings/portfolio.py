@@ -26,9 +26,12 @@ class Portfolio:
         self.benchmark = self.config['benchmark']['benchmark_name']
         self.pf_id = self.config['portfolio_information']['pf_id']
         self.position_handler = PositionHandler()
+        self.symbols = []
         self.history = pd.DataFrame()
         self.records = pd.DataFrame()
         self.create_history_table()
+
+        self.add_symbols()
         logger.success('Portfolio ' + self.pf_id + ' created.')
 
     @logger.catch
@@ -45,6 +48,10 @@ class Portfolio:
         logger.info('Info read from portfolio_config.ini file.')
 
         return conf
+
+    def add_symbols(self):
+        for key, value in self.position_handler.positions.items():
+            self.symbols.append(key)
 
     def update_all_market_values(self,
                                  date: str,

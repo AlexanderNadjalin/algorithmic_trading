@@ -32,5 +32,5 @@ class CommissionScheme:
         elif self.name == 'avanza_fast':
             return 99.0
         # No commission
-        elif self.name == '':
+        else:
             return 0.0

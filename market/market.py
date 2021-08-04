@@ -21,6 +21,7 @@ class Market:
         self.read_csv(input_file_name=self.market_file_name)
         self.data_valid()
         self.columns = self.data.columns.to_list()
+        self.som_eom()
         logger.success('Market created.')
 
     @logger.catch
@@ -65,7 +66,6 @@ class Market:
             else:
                 logger.info('Data file "' + input_file_name + '" read.')
 
-        # raw_data['DATE'].apply(lambda x: x.strftime('%Y-%m-%d'))
         raw_data = raw_data.set_index(['DATE'])
 
         self.data = raw_data
@@ -145,6 +145,48 @@ class Market:
         else:
             logger.critical('Fill method ' + self.fill_missing_method + ' not implemented. Aborted.')
             quit()
+            
+    def som_eom(self) -> None:
+        """
+
+        Add columns is_som and is_eom indicating start-of-month and end-of-month respectively.
+        Used for monthly re-balancing strategies.
+        :return: None.
+        """
+        self.data['dt'] = pd.to_datetime(self.data.index,
+                                         format='%Y-%m-%d')
+        self.data['month'] = self.data['dt'].dt.month.diff()
+        self.data['month'].fillna(0.0, inplace=True)
+
+        self.data['week'] = self.data['dt'].dt.isocalendar().week.diff()
+        self.data['week'].fillna(0.0, inplace=True)
+
+        # Start of month.
+        self.data['is_som'] = self.data['month'].apply(lambda x: 1 if x != 0.0 else 0)
+
+        # End of month.
+        self.data['is_eom'] = self.data['is_som'].shift(-1)
+        self.data['is_eom'].fillna(0.0, inplace=True)
+        self.data['is_eom'] = self.data['is_eom'].astype(int)
+
+        # Start of week.
+        self.data['is_sow'] = self.data['week'].apply(lambda x: 1 if x != 0.0 else 0)
+
+        # End of week.
+        self.data['is_eow'] = self.data['is_sow'].shift(-1)
+        self.data['is_eow'].fillna(0.0, inplace=True)
+        self.data['is_eow'] = self.data['is_eow'].astype(int)
+
+        # Drop temp columns.
+        self.data.drop(labels='month',
+                       axis='columns',
+                       inplace=True)
+        self.data.drop(labels='week',
+                       axis='columns',
+                       inplace=True)
+        self.data.drop(labels='dt',
+                       axis='columns',
+                       inplace=True)
 
     def select(self,
                columns: list,
@@ -158,6 +200,7 @@ class Market:
         :param end_date:End date (newest date, included in selection)
         :return: Pandas dataframe.
         """
+        cols = columns.copy()
         if any(item in self.columns for item in columns):
             if start_date not in self.data.index.values:
                 logger.critical('Selected start date not in market data. Aborted.')
@@ -166,8 +209,12 @@ class Market:
                 logger.critical('Selected end date not in market data. Aborted.')
                 quit()
             mask = (self.data.index.values >= start_date) & (self.data.index.values <= end_date)
-            df = self.data.loc[mask]
-            return df[columns]
+            cols.append('is_som')
+            cols.append('is_eom')
+            cols.append('is_sow')
+            cols.append('is_eow')
+            df = self.data[cols].loc[mask]
+            return df
         else:
             logger.critical('Selected column name not in market data. Aborted.')
             quit()
@@ -175,6 +222,13 @@ class Market:
     def date_from_index(self,
                         current_date: str,
                         index_loc: int) -> str:
+        """
+
+        Get date as string. Starts at current date and offsets index_loc number of days.
+        :param current_date: Date.
+        :param index_loc: Number of offset days.
+        :return: Date.
+        """
         mask = (self.data.index.values >= current_date)
         df = self.data.loc[mask]
         date = df.iloc[[index_loc]].index.values[0]

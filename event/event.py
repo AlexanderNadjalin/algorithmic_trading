@@ -51,3 +51,23 @@ class Transaction(Event):
         return 'Transaction event [date: %s, direction: %s, name: %s, quantity: %s, price: %s]' % (
             self.date, self.trans.direction, self.trans.name, self.trans.quantity, self.trans.price
         )
+
+
+class CalcSignal(Event):
+    """
+
+    Event indicating that we need to calculate the Strategy's signal requirements.
+    """
+    def __init__(self,
+                 date: str):
+        self.type = 'CALCSIGNAL'
+        self.date = date
+
+    @property
+    def details(self) -> str:
+        """
+
+        Details for verbose logging.
+        :return: String for logging.
+        """
+        return 'Calculate signal event [date: %s]' % self.date

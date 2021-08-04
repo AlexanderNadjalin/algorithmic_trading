@@ -1,9 +1,10 @@
+import queue
 from loguru import logger
 import configparser as cp
-from event import event, event_handler
+from event import event
 from market.market import Market
 from holdings.portfolio import Portfolio
-from event.event_handler import EventHandler
+from strategy.strategy import Strategy
 from metric.metric import Metric
 
 
@@ -13,7 +14,6 @@ class Backtest:
     Main backtest class. Holds a Portfolio, Market and Metric object.
     """
     def __init__(self,
-                 eh: EventHandler,
                  market: Market,
                  pf: Portfolio,
                  start_date: str,
@@ -21,14 +21,16 @@ class Backtest:
                  verbose=False):
         self.config = self.config()
 
-        self.event_handler = event_handler.EventHandler(market=market,
-                                                        pf=pf)
+        self.events = queue.Queue()
+        self.event = None
+
         self.cont_backtest = True
-        self.eh = eh
         self.market = market
         self.pf = pf
+
         self.verbose = verbose
         self.metric = Metric()
+        self.strategy = None
 
         self.start_date = start_date
         self.end_date = end_date
@@ -41,7 +43,8 @@ class Backtest:
         self.current_date = self.start_date
         self.current_index = self.start_index
 
-
+        self.pf.update_all_market_values(date=self.current_date,
+                                         market_data=self.market)
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -72,6 +75,17 @@ class Backtest:
             logger.critical('Date ' + date + ' does not exist in market data files. Aborted.')
             quit()
 
+    def add_strategy(self,
+                     strategy=Strategy) -> None:
+        """
+
+        Add a strategy to a backest.
+        Strategies require information about Market and Portfolio and can't be initialized before the backest.
+        :param strategy: Strategy object.
+        :return: None.
+        """
+        self.strategy = strategy
+
     def run(self) -> None:
         """
 
@@ -83,14 +97,80 @@ class Backtest:
         # Infinite outer loop for handling each date in backtest period
         while True:
             if self.cont_backtest:
+                market_ev = event.Market(date=self.current_date)
+                self.events.put(item=market_ev)
 
                 # Infinite inner loop for handling events
-                while not self.eh.is_empty():
-                    self.eh.handle_event()
+                while True:
+                    try:
+                        # Get event from queue.
+                        self.event = self.events.get(False)
+                    except queue.Empty:
+                        # Break inner loop if no events in queue
+                        break
 
-                e = event.Market(date=self.current_date)
-                self.eh.put_event(e)
-                self.eh.handle_event()
+                    if self.event.type == 'MARKET':
+
+                        self.pf.update_all_market_values(date=self.event.date,
+                                                         market_data=self.market)
+                        self.events.task_done()
+
+                        if self.strategy is not None:
+                            calc_signal_ev = event.CalcSignal(date=self.current_date)
+                            self.events.put(item=calc_signal_ev)
+
+                        if self.verbose:
+                            logger.info(self.event.details)
+
+                    if self.event.type == 'CALCSIGNAL':
+                        # Different strategies require different ways to handle calculation of signals.
+                        if self.strategy.name == 'Periodic re-balancing':
+                            # Get market data for specific date.
+                            cols = list(self.strategy.id_weight.keys())
+                            df = self.market.select(columns=cols,
+                                                    start_date=self.event.date,
+                                                    end_date=self.event.date)
+                            # Start-of-month re-balance.
+                            if df['is_som'].iloc[0] == 1 and self.strategy.period == 'som':
+                                self.strategy.calc_signal(events=self.events,
+                                                          data=df,
+                                                          idx=self.current_index,
+                                                          pf=self.pf)
+                            # End-of-month re-balance.
+                            elif df['is_eom'].iloc[0] == 1 and self.strategy.period == 'eom':
+                                self.strategy.calc_signal(events=self.events,
+                                                          data=df,
+                                                          idx=self.current_index,
+                                                          pf=self.pf)
+                            # Start-of-week re-balance.
+                            if df['is_sow'].iloc[0] == 1 and self.strategy.period == 'sow':
+                                self.strategy.calc_signal(events=self.events,
+                                                          data=df,
+                                                          idx=self.current_index,
+                                                          pf=self.pf)
+                            # End-of-week re-balance.
+                            elif df['is_eow'].iloc[0] == 1 and self.strategy.period == 'eow':
+                                self.strategy.calc_signal(events=self.events,
+                                                          data=df,
+                                                          idx=self.current_index,
+                                                          pf=self.pf)
+                            else:
+                                logger.critical('Strategy ' + self.strategy.name + ' not implemented yet.')
+                                quit()
+                        else:
+                            pass
+
+                        if self.verbose:
+                            logger.info(self.event.details)
+
+                        self.events.task_done()
+
+                    if self.event.type == 'TRANSACTION':
+                        self.pf.transact_security(trans=self.event.trans)
+                        if self.verbose:
+                            logger.info(self.event.details)
+
+                        self.events.task_done()
 
                 self.current_index += 1
 
@@ -100,8 +180,12 @@ class Backtest:
                     self.metric.calc_all(self.pf)
 
                     self.cont_backtest = False
+
+                    self.metric.calc_all(pf=self.pf)
+
                     logger.success('Backtest completed.')
                 else:
-                    self.current_date = self.market.data.iloc[self.current_index, :].to_frame().transpose().index.values[0]
+                    self.current_date = \
+                        self.market.data.iloc[self.current_index, :].to_frame().transpose().index.values[0]
             else:
                 break
