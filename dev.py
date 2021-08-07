@@ -28,8 +28,7 @@ def dev():
     bt.run()
 
     p = Plot(bt=bt)
-    p.drawdowns_plot()
-    p.rolling_sharpe_beta_plot()
+    p.returns_hm()
 
 
 if __name__ == '__main__':
