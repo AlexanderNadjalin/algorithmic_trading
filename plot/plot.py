@@ -1,4 +1,8 @@
 import matplotlib.pyplot as plt
+from matplotlib import cm
+import seaborn as sns
+import pandas as pd
+import numpy as np
 from loguru import logger
 from backtest.backtest import Backtest
 
@@ -119,6 +123,84 @@ class Plot:
             ax.grid(b=True, which='major', color='#999999', linestyle='-', alpha=0.4)
             ax.legend(loc='best', prop={'size': 8})
             plt.setp(ax.get_xticklabels(), visible=True, rotation=45, ha='center')
+
+    def aggr_rets(self,
+                  rets: pd.DataFrame,
+                  period: str) -> np.array:
+        """
+
+        Convert daily returns to aggregated returns per given period - yearly, monthly and weekly.
+        :param rets: Market data from Backtest.
+        :param period:
+        :return: Numpy array with converted returns.
+        """
+        def cumulate_rets(x):
+            return np.exp(np.log(1 + x).cumsum())[-1] - 1
+
+        if period == 'weekly':
+            return rets.groupby(
+                [lambda x: x.year,
+                 lambda x: x.month,
+                 lambda x: x.isocalendar()[1]]).apply(cumulate_rets)
+        elif period == 'monthly':
+            return rets.groupby(
+                [lambda x: x.year, lambda x: x.month]).apply(cumulate_rets)
+        elif period == 'yearly':
+            return rets.groupby(
+                [lambda x: x.year]).apply(cumulate_rets)
+        else:
+            logger.critical('Chosen aggregated period "' + period + '" is not implemented. Aborted.')
+            quit()
+
+    def returns_hm(self) -> plt.axis:
+        """
+
+        Calculate monthly returns as a Seaborn heatmap.
+        Requires Metrics.calc_returns() to have been run.
+        :return: Matplotlib axis.
+        """
+        # Get data from backtest results.
+        df = self.bt.pf.records.copy()
+        df['dt'] = pd.to_datetime(df.index,
+                                  format='%Y-%m-%d')
+        df.reset_index(inplace=True)
+        df.set_index(keys='dt',
+                     inplace=True)
+
+        rets = df['pf_1d_pct_rets']
+        ax = plt.gca()
+
+        # Use help function for aggregation.
+        monthly_rets = self.aggr_rets(rets=rets,
+                                      period='monthly')
+        monthly_rets = monthly_rets.unstack()
+        monthly_rets = np.round(monthly_rets, 3)
+
+        # Rename month names.
+        monthly_rets.rename(
+            columns={1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
+                     5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
+                     9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'},
+            inplace=True
+        )
+
+        # Create Seaborn heatmap and set look.
+        sns.heatmap(
+            monthly_rets.fillna(0) * 100.0,
+            annot=True,
+            fmt="0.1f",
+            annot_kws={"size": 8},
+            alpha=1.0,
+            center=0.0,
+            cbar=False,
+            cmap=cm.RdYlGn,
+            ax=ax)
+        ax.set_title('Monthly Returns (%)')
+        ax.set_ylabel('')
+        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
+        ax.set_xlabel('')
+
+        return ax
 
     def save_plot(self,
                   name: str,

@@ -27,9 +27,10 @@ def dev():
     bt.add_strategy(strategy=s)
     bt.run()
 
+    print(bt.metric.calc_sharpe_ratio(pf=bt.pf))
+
     p = Plot(bt=bt)
-    p.drawdowns_plot()
-    p.rolling_sharpe_beta_plot()
+    p.returns_hm()
 
 
 if __name__ == '__main__':

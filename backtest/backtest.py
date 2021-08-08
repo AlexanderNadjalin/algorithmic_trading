@@ -143,7 +143,7 @@ class Backtest:
                                                           idx=self.current_index,
                                                           pf=self.pf)
                             # Start-of-week re-balance.
-                            if df['is_sow'].iloc[0] == 1 and self.strategy.period == 'sow':
+                            elif df['is_sow'].iloc[0] == 1 and self.strategy.period == 'sow':
                                 self.strategy.calc_signal(events=self.events,
                                                           data=df,
                                                           idx=self.current_index,
@@ -154,9 +154,6 @@ class Backtest:
                                                           data=df,
                                                           idx=self.current_index,
                                                           pf=self.pf)
-                            else:
-                                logger.critical('Strategy ' + self.strategy.name + ' not implemented yet.')
-                                quit()
                         else:
                             pass
 
