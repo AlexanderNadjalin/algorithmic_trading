@@ -27,10 +27,10 @@ def dev():
     bt.add_strategy(strategy=s)
     bt.run()
 
-    print(bt.metric.calc_sharpe_ratio(pf=bt.pf))
+    print(bt.metric.max_drawdown(pf=bt.pf))
 
     p = Plot(bt=bt)
-    p.returns_hm()
+    p.drawdowns_plot()
 
 
 if __name__ == '__main__':

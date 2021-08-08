@@ -44,7 +44,7 @@ class Metric:
         col_idx = pf.records.columns.get_loc('pf_1d_pct_rets')
         pf.records.iloc[0, col_idx] = pf.records['total_market_value'].iloc[0] / pf.init_cash - 1
         pf.records['pf_cum_rets'] = np.cumprod(1 + pf.records['pf_1d_pct_rets']) - 1
-        pf.records.loc[:, 'pf_cum_rets'] *= 100
+        # pf.records.loc[:, 'pf_cum_rets'] *= 100
 
         # If benchmark exists
         if pf.benchmark == '':
@@ -54,7 +54,7 @@ class Metric:
             col_idx = pf.records.columns.get_loc('bm_1d_pct_rets')
             pf.records.iloc[0, col_idx] = 0
             pf.records['bm_cum_rets'] = np.cumprod(1 + pf.records['bm_1d_pct_rets']) - 1
-            pf.records.loc[:, 'bm_cum_rets'] *= 100
+            # pf.records.loc[:, 'bm_cum_rets'] *= 100
         pf.records.set_index('current_date', inplace=True)
         pf.records.fillna(0, inplace=True)
         logger.info('Metrics calculated for returns.')
@@ -63,14 +63,14 @@ class Metric:
     def create_drawdowns(pf: Portfolio):
         """
 
-        Calculates maximum drawdown and maximum drawdown duration.
+        Calculates drawdown and drawdown duration.
         Maximum drawdown is the largest peak-to-trough drop.
         Maximum drawdown duration is defined as the number of periods over which the maximum drawdown occurs.
         :param pf: Portfolio object.
         :return: None.
         """
         high_water_mark = [0]
-        equity_curve = pf.records['total_market_value']
+        equity_curve = pf.records['pf_cum_rets']
         eq_idx = pf.records.index
         drawdown = pd.Series(index=eq_idx)
         duration = pd.Series(index=eq_idx)
@@ -78,13 +78,38 @@ class Metric:
         for t in range(1, len(eq_idx)):
             cur_hwm = max(high_water_mark[t - 1], equity_curve[t])
             high_water_mark.append(cur_hwm)
-            drawdown[t] = (equity_curve[t] / high_water_mark[t] - 1) * 100
+            if t == 1:
+                drawdown[t] == 0
+            else:
+                drawdown[t] = (equity_curve[t] / high_water_mark[t] - 1)
             duration[t] = 0 if drawdown[t] == 0 else duration[t - 1] + 1
         pf.records['drawdown'] = drawdown
         pf.records['duration'] = duration
         pf.records['drawdown'].fillna(0, inplace=True)
         pf.records['duration'].fillna(0, inplace=True)
         logger.info('Metrics calculated for drawdowns.')
+
+    @staticmethod
+    def max_drawdown(pf: Portfolio) -> float:
+        """
+
+        Calculate maximum drawdown in percent.
+        Requires that metrics.create_drawdowns() has been run.
+        :param pf: Portfolio.
+        :return: Maximum drawdown value in percent.
+        """
+        return pf.records['drawdown'].min()
+
+    @staticmethod
+    def max_drawdown_duration(pf:Portfolio) -> float:
+        """
+
+        Calculate maximum drawdown duration in days.
+        Requires that metrics.create_drawdowns() has been run.
+        :param pf: Portfolio.
+        :return: Maximum drawdown duration in days.
+        """
+        return pf.records['duration'].max()
 
     def create_rolling_sharpe_ratio(self,
                                     pf: Portfolio) -> None:

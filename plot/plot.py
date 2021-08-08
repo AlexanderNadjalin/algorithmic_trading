@@ -81,14 +81,18 @@ class Plot:
         ax1 = plt.subplot(211)
         ax2 = plt.subplot(212)
 
-        self.bt.pf.records.iloc[:, p1].plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Portfolio')
-        self.bt.pf.records.iloc[:, p2].plot(lw=1, color='green', alpha=0.60, ax=ax1, label='Benchmark')
-        self.bt.pf.records.iloc[:, p3].plot(lw=1, color='black', alpha=0.60, ax=ax2, label='Drawdowns')
+        pf_cum_rets_pct = self.bt.pf.records.iloc[:, p1] * 100
+        bm_cum_rets_pct =self.bt.pf.records.iloc[:, p2] * 100
+        dd_pct = self.bt.pf.records.iloc[:, p3]
+
+        pf_cum_rets_pct.plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Portfolio')
+        bm_cum_rets_pct.plot(lw=1, color='green', alpha=0.60, ax=ax1, label='Benchmark')
+        dd_pct.plot(lw=1, color='black', alpha=0.60, ax=ax2, label='Drawdowns')
 
         ax1.set_xlabel('Date')
         ax1.set_ylabel('%')
-        pf_tot_rets = str(format(self.records['pf_cum_rets'].iloc[-1], ".2f"))
-        bm_tot_rets = str(format(self.records['bm_cum_rets'].iloc[-1], ".2f"))
+        pf_tot_rets = str(format(pf_cum_rets_pct.iloc[-1], ".2f"))
+        bm_tot_rets = str(format(bm_cum_rets_pct.iloc[-1], ".2f"))
 
         # Include strategy name in title
         title_str = 'Cumulative returns (Portfolio: ' + pf_tot_rets + '%, Benchmark: ' + bm_tot_rets + '%)'
@@ -201,6 +205,9 @@ class Plot:
         ax.set_xlabel('')
 
         return ax
+
+    def create_tear_sheet(self):
+        pass
 
     def save_plot(self,
                   name: str,
