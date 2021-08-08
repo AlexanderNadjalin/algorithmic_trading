@@ -1,5 +1,4 @@
 import pandas as pd
-from datetime import datetime as dt
 import numpy as np
 from loguru import logger
 import configparser as cp
@@ -14,6 +13,10 @@ class Metric:
     """
     def __init__(self):
         self.config = self.config()
+        self.rolling_beta_period = self.config['rolling_sharpe_ratio']['period']
+        self.rolling_sharpe_ratio_period = self.config['rolling_sharpe_ratio']['period']
+        self.sharpe_ratio_period = self.config['sharpe_ratio']['period']
+        self.sortino_ratio_period = self.config['sortino_ratio']['period']
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -167,3 +170,51 @@ class Metric:
         self.create_drawdowns(pf=pf)
         self.create_rolling_sharpe_ratio(pf=pf)
         self.create_rolling_beta(pf=pf)
+
+    def calc_cagr(self,
+                  pf: Portfolio) -> float:
+        """
+
+        Calculate the Compound Annual Growth Rate (CAGR) as:
+        (Value(start) / Value(end)) ^ (1 / time) - 1
+        :return: CAGR value in percent.
+        """
+        time = 1 / len(pf.records)
+        cagr = (pf.records['total_market_value'].iloc[-1] / pf.records['total_market_value'].iloc[0]) ** time - 1.0
+        return cagr * 100
+
+    def calc_sharpe_ratio(self,
+                          pf: Portfolio) -> float:
+        """
+
+        Calculate Sharpe ratio for a Portfolio that has been used in a Backtest.
+        Requires that metrics.calc_returns() has been run.
+        Period is set in the metrics.metrics_config.ini file.
+        :param pf: Portfolio object.
+        :return: Sharpe ratio.
+        """
+        # Get data from backtest results.
+        df = pf.records.copy()
+        df['dt'] = pd.to_datetime(df.index,
+                                  format='%Y-%m-%d')
+        df.reset_index(inplace=True)
+        df.set_index(keys='dt',
+                     inplace=True)
+
+        rets = df['pf_1d_pct_rets']
+
+        return np.sqrt(float(self.sharpe_ratio_period)) * (np.mean(rets)) / np.std(rets)
+
+    def calc_sortino_ratio(self,
+                           pf: Portfolio) -> float:
+        # Get data from backtest results.
+        df = pf.records.copy()
+        df['dt'] = pd.to_datetime(df.index,
+                                  format='%Y-%m-%d')
+        df.reset_index(inplace=True)
+        df.set_index(keys='dt',
+                     inplace=True)
+
+        rets = df['pf_1d_pct_rets']
+
+        return np.sqrt(float(self.sortino_ratio_period)) * (np.mean(rets)) / np.std(rets[rets < 0])

@@ -27,6 +27,8 @@ def dev():
     bt.add_strategy(strategy=s)
     bt.run()
 
+    print(bt.metric.calc_sharpe_ratio(pf=bt.pf))
+
     p = Plot(bt=bt)
     p.returns_hm()
 
