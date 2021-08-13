@@ -30,7 +30,7 @@ def dev():
     print(bt.metric.max_drawdown(pf=bt.pf))
 
     p = Plot(bt=bt)
-    p.drawdowns_plot()
+    p.create_tear_sheet()
 
 
 if __name__ == '__main__':

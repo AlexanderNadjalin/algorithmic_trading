@@ -144,23 +144,24 @@ class Plot:
         if period == 'weekly':
             return rets.groupby(
                 [lambda x: x.year,
-                 lambda x: x.month,
-                 lambda x: x.isocalendar()[1]]).apply(cumulate_rets)
+                 lambda x: x.isocalendar()[1]]).apply(cumulate_rets) * 100
         elif period == 'monthly':
             return rets.groupby(
-                [lambda x: x.year, lambda x: x.month]).apply(cumulate_rets)
+                [lambda x: x.year, lambda x: x.month]).apply(cumulate_rets) * 100
         elif period == 'yearly':
             return rets.groupby(
-                [lambda x: x.year]).apply(cumulate_rets)
+                [lambda x: x.year]).apply(cumulate_rets) * 100
         else:
             logger.critical('Chosen aggregated period "' + period + '" is not implemented. Aborted.')
             quit()
 
-    def returns_hm(self) -> plt.axis:
+    def returns_hm(self,
+                   period: str) -> plt.axis:
         """
 
-        Calculate monthly returns as a Seaborn heatmap.
+        Calculate period returns as a Seaborn heatmap.
         Requires Metrics.calc_returns() to have been run.
+        :param period: "yearly", "monthly" or "weekly".
         :return: Matplotlib axis.
         """
         # Get data from backtest results.
@@ -175,39 +176,79 @@ class Plot:
         ax = plt.gca()
 
         # Use help function for aggregation.
-        monthly_rets = self.aggr_rets(rets=rets,
-                                      period='monthly')
-        monthly_rets = monthly_rets.unstack()
-        monthly_rets = np.round(monthly_rets, 3)
+        aggr_rets = self.aggr_rets(rets=rets,
+                                   period=period)
 
-        # Rename month names.
-        monthly_rets.rename(
-            columns={1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
-                     5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
-                     9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'},
-            inplace=True
-        )
+        aggr_rets = np.round(aggr_rets, 3)
+        frame = pd.DataFrame(aggr_rets) * 100
 
-        # Create Seaborn heatmap and set look.
-        sns.heatmap(
-            monthly_rets.fillna(0) * 100.0,
-            annot=True,
-            fmt="0.1f",
-            annot_kws={"size": 8},
-            alpha=1.0,
-            center=0.0,
-            cbar=False,
-            cmap=cm.RdYlGn,
-            ax=ax)
-        ax.set_title('Monthly Returns (%)')
-        ax.set_ylabel('')
+        # Rename column names.
+        if period == 'monthly':
+            frame = aggr_rets.unstack()
+            frame.rename(
+                columns={1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
+                         5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
+                         9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'},
+                inplace=True
+            )
+            sns.heatmap(
+                frame,
+                fmt="0.1f",
+                annot=True,
+                annot_kws={"size": 6},
+                alpha=1.0,
+                center=0.0,
+                cbar=False,
+                cmap=cm.RdYlGn,
+                square=True,
+                ax=ax)
+
+        else:
+            anotate_str = True
+            x_ticks_str = False
+            if period == 'weekly':
+                frame = aggr_rets.unstack()
+                anotate_str = False
+                x_ticks_str = True
+            sns.heatmap(
+                frame,
+                fmt="0.1f",
+                annot=anotate_str,
+                xticklabels=x_ticks_str,
+                annot_kws={"size": 6},
+                alpha=1.0,
+                center=0.0,
+                cbar=False,
+                cmap=cm.RdYlGn,
+                square=True,
+                ax=ax)
+
+        if period == 'yearly':
+            title_str = 'Yearly returns (%)'
+            y_lbl_str = 'Year'
+            x_lbl_str = ''
+        elif period == 'monthly':
+            title_str = 'Monthly returns (%)'
+            x_lbl_str = 'Month'
+            y_lbl_str = 'Year'
+        else:
+            title_str = 'Weekly returns (%)'
+            x_lbl_str = 'Week'
+            y_lbl_str = 'Year'
+        ax.set_title(title_str)
+        ax.set_ylabel(y_lbl_str)
         ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-        ax.set_xlabel('')
+        ax.set_xlabel(xlabel=x_lbl_str)
 
         return ax
 
     def create_tear_sheet(self):
-        pass
+        ax_yearly_rets = self.returns_hm(period='yearly')
+        plt.show()
+        ax_monthly_rets = self.returns_hm(period='monthly')
+        plt.show()
+        ax_weekly_rets = self.returns_hm(period='weekly')
+        plt.show()
 
     def save_plot(self,
                   name: str,
