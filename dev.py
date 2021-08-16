@@ -1,7 +1,5 @@
 from market.market import Market
-from holdings.transaction import Transaction
 from holdings.portfolio import Portfolio
-from event import event, event_handler
 from backtest.backtest import Backtest
 from strategy.strategy import PeriodicRebalancing
 from plot.plot import Plot
@@ -14,7 +12,7 @@ def dev():
     market = Market(market_file_name=market_file_ane,
                     fill_missing_method='forward')
 
-    pf = Portfolio(inception_date='2020-03-02')
+    pf = Portfolio(inception_date='2017-07-27')
 
     s = PeriodicRebalancing(period='som',
                             id_weight={'XACTOMXS30.ST': 0.99})
@@ -27,10 +25,11 @@ def dev():
     bt.add_strategy(strategy=s)
     bt.run()
 
-    print(bt.metric.max_drawdown(pf=bt.pf))
-
     p = Plot(bt=bt)
-    p.create_tear_sheet()
+    p.plot_text()
+    # p.drawdowns_plot()
+    # p.rolling_sharpe_beta_plot()
+    # p.create_tear_sheet()
 
 
 if __name__ == '__main__':

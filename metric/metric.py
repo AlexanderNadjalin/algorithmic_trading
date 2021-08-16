@@ -79,9 +79,12 @@ class Metric:
             cur_hwm = max(high_water_mark[t - 1], equity_curve[t])
             high_water_mark.append(cur_hwm)
             if t == 1:
-                drawdown[t] == 0
+                drawdown[t] = 0
             else:
-                drawdown[t] = (equity_curve[t] / high_water_mark[t] - 1)
+                if high_water_mark[t] == 0:
+                    drawdown[t] = 0
+                else:
+                    drawdown[t] = (equity_curve[t] / high_water_mark[t] - 1)
             duration[t] = 0 if drawdown[t] == 0 else duration[t - 1] + 1
         pf.records['drawdown'] = drawdown
         pf.records['duration'] = duration
@@ -101,7 +104,7 @@ class Metric:
         return pf.records['drawdown'].min()
 
     @staticmethod
-    def max_drawdown_duration(pf:Portfolio) -> float:
+    def max_drawdown_duration(pf: Portfolio) -> float:
         """
 
         Calculate maximum drawdown duration in days.
@@ -195,6 +198,8 @@ class Metric:
         self.create_drawdowns(pf=pf)
         self.create_rolling_sharpe_ratio(pf=pf)
         self.create_rolling_beta(pf=pf)
+        self.calc_cagr(pf=pf)
+        self.calc_sortino_ratio(pf=pf)
 
     def calc_cagr(self,
                   pf: Portfolio) -> float:
@@ -243,3 +248,32 @@ class Metric:
         rets = df['pf_1d_pct_rets']
 
         return np.sqrt(float(self.sortino_ratio_period)) * (np.mean(rets)) / np.std(rets[rets < 0])
+
+    def calc_tot_pf_rets(self,
+                         pf: Portfolio) -> float:
+        """
+
+        Get total returns for portfolio in backtest.
+        :param pf: Portfolio object.
+        :return: Portfolio returns in decimal format.
+        """
+        # Get data from backtest results.
+        p1 = pf.records.columns.get_loc('pf_cum_rets')
+        pf_cum_rets_pct = pf.records.iloc[:, p1]
+        return pf_cum_rets_pct.iloc[-1]
+
+    def calc_tot_bm_rets(self,
+                         pf: Portfolio) -> float:
+        """
+
+        Get total returns for benchmark in backtest.
+        :param pf: Portfolio object.
+        :return: Benchmark returns in decimal format.
+        """
+        if pf.benchmark is None:
+            logger.critical('No benchmark for portfolio. Check portfolio_config.ini file. Aborted.')
+            quit()
+        # Get data from backtest results.
+        p1 = pf.records.columns.get_loc('bm_cum_rets')
+        pf_cum_rets_pct = pf.records.iloc[:, p1]
+        return pf_cum_rets_pct.iloc[-1]

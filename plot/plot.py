@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib import gridspec
+from matplotlib.ticker import FuncFormatter
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -21,12 +23,12 @@ class Plot:
         self.save_location = bt.config['output_files']['output_file_directory']
 
     def rolling_sharpe_beta_plot(self,
-                                 save=False) -> None:
+                                 save=False) -> plt.figure():
         """
 
         Dual plot with rolling Sharpe ratio above, and rolling beta below.
         :param save: True ito save to file.
-        :return: None.
+        :return: Matplotlib figure.
         """
         p1 = self.records.columns.get_loc('pf_sharpe_ratio')
         p2 = self.records.columns.get_loc('rolling_beta')
@@ -56,14 +58,14 @@ class Plot:
                        look_nr=1)
 
         fig.tight_layout()
-        plt.show()
 
         if save:
-            self.save_plot(name=self.bt.pf.pf_id + 'rolling_sharpe_beta_plot.png',
+            self.save_plot(name=self.bt.pf.pf_id + '_rolling_sharpe_beta.png',
                            fig=fig)
+        plt.show()
 
     def drawdowns_plot(self,
-                       save=False) -> None:
+                       save=False) -> plt.figure():
         """
 
         Dual plot with cumulative portfolio returns and benchmark returns above, and drawdowns below.
@@ -82,7 +84,7 @@ class Plot:
         ax2 = plt.subplot(212)
 
         pf_cum_rets_pct = self.bt.pf.records.iloc[:, p1] * 100
-        bm_cum_rets_pct =self.bt.pf.records.iloc[:, p2] * 100
+        bm_cum_rets_pct = self.bt.pf.records.iloc[:, p2] * 100
         dd_pct = self.bt.pf.records.iloc[:, p3]
 
         pf_cum_rets_pct.plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Portfolio')
@@ -112,11 +114,11 @@ class Plot:
                        look_nr=1)
 
         fig.tight_layout()
-        plt.show()
 
         if save:
-            self.save_plot(name=self.bt.pf.pf_id + 'drawdown_plot.png',
+            self.save_plot(name=self.bt.pf.pf_id + '_drawdowns.png',
                            fig=fig)
+        plt.show()
 
     @staticmethod
     def plot_look(ax: plt.subplots,
@@ -156,13 +158,15 @@ class Plot:
             quit()
 
     def returns_hm(self,
+                   ax: plt.axes,
                    period: str) -> plt.axis:
         """
 
         Calculate period returns as a Seaborn heatmap.
         Requires Metrics.calc_returns() to have been run.
         :param period: "yearly", "monthly" or "weekly".
-        :return: Matplotlib axis.
+        :param ax: Matplotlib axes object to plot on.
+        :return: Matplotlib axes.
         """
         # Get data from backtest results.
         df = self.bt.pf.records.copy()
@@ -173,7 +177,8 @@ class Plot:
                      inplace=True)
 
         rets = df['pf_1d_pct_rets']
-        ax = plt.gca()
+        if ax is None:
+            ax = plt.gca()
 
         # Use help function for aggregation.
         aggr_rets = self.aggr_rets(rets=rets,
@@ -195,12 +200,13 @@ class Plot:
                 frame,
                 fmt="0.1f",
                 annot=True,
-                annot_kws={"size": 6},
+                annot_kws={"size": 4},
                 alpha=1.0,
                 center=0.0,
                 cbar=False,
                 cmap=cm.RdYlGn,
                 square=True,
+                linewidths=1,
                 ax=ax)
 
         else:
@@ -221,12 +227,15 @@ class Plot:
                 cbar=False,
                 cmap=cm.RdYlGn,
                 square=True,
+                linewidths=1,
                 ax=ax)
 
+        rot = 0
         if period == 'yearly':
             title_str = 'Yearly returns (%)'
             y_lbl_str = 'Year'
             x_lbl_str = ''
+
         elif period == 'monthly':
             title_str = 'Monthly returns (%)'
             x_lbl_str = 'Month'
@@ -235,19 +244,74 @@ class Plot:
             title_str = 'Weekly returns (%)'
             x_lbl_str = 'Week'
             y_lbl_str = 'Year'
+            rot = 90
         ax.set_title(title_str)
-        ax.set_ylabel(y_lbl_str)
-        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-        ax.set_xlabel(xlabel=x_lbl_str)
+        ax.set_ylabel(y_lbl_str,
+                      fontsize=8)
+        ax.set_xlabel(xlabel=x_lbl_str,
+                      fontsize=8)
+        ax.set_yticklabels(ax.get_yticklabels(),
+                           rotation=0,
+                           fontsize=6)
+        ax.set_xticklabels(ax.get_xticklabels(),
+                           rotation=rot,
+                           fontsize=6)
 
         return ax
 
-    def create_tear_sheet(self):
-        ax_yearly_rets = self.returns_hm(period='yearly')
+    def create_tear_sheet(self,
+                          save=False):
+        fig = plt.figure()
+        gs = gridspec.GridSpec(2, 2)
+        ax_yearly = plt.subplot(gs[0, 0])
+        ax_monthly = plt.subplot(gs[0, 1])
+        ax_weekly = plt.subplot(gs[1, :])
+        self.returns_hm(ax=ax_yearly,
+                        period='yearly')
+        self.returns_hm(ax=ax_monthly,
+                        period='monthly')
+        self.returns_hm(ax=ax_weekly,
+                        period='weekly')
+
+        fig.suptitle('Period returns and metrics', fontsize=16)
+        fig.tight_layout()
+
+        if save:
+            self.save_plot(name=self.bt.pf.pf_id + '_tear_sheet.png',
+                           fig=fig)
+
         plt.show()
-        ax_monthly_rets = self.returns_hm(period='monthly')
-        plt.show()
-        ax_weekly_rets = self.returns_hm(period='weekly')
+
+    def plot_text(self,
+                  save=False):
+        def format_perc(x, pos):
+            return '%.0f%%' % x
+
+        ax = plt.gca()
+
+        ax.text(2,
+                11,
+                self.bt.strategy.name,
+                fontweight='bold',
+                horizontalalignment='right',
+                fontsize=8,
+                color='green')
+
+        ax.grid(False)
+        ax.spines['top'].set_linewidth(2.0)
+        ax.spines['bottom'].set_linewidth(2.0)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.get_xaxis().set_visible(False)
+        ax.set_ylabel('')
+        ax.set_xlabel('')
+
+        ax.axis([0, 10, 0, 10])
+
+        if save:
+            self.save_plot(name=self.bt.pf.pf_id + '_tear_sheet.png',
+                           fig=ax)
         plt.show()
 
     def save_plot(self,

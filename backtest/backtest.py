@@ -43,8 +43,8 @@ class Backtest:
         self.current_date = self.start_date
         self.current_index = self.start_index
 
-        self.pf.update_all_market_values(date=self.current_date,
-                                         market_data=self.market)
+        # self.pf.update_all_market_values(date=self.current_date,
+        #                                  market_data=self.market)
 
     @logger.catch
     def config(self) -> cp.ConfigParser:
@@ -110,7 +110,6 @@ class Backtest:
                         break
 
                     if self.event.type == 'MARKET':
-
                         self.pf.update_all_market_values(date=self.event.date,
                                                          market_data=self.market)
                         self.events.task_done()
