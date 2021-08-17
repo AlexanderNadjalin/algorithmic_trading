@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from matplotlib import gridspec
+from matplotlib.ticker import FuncFormatter
 import seaborn as sns
 import pandas as pd
 import numpy as np
@@ -21,12 +23,12 @@ class Plot:
         self.save_location = bt.config['output_files']['output_file_directory']
 
     def rolling_sharpe_beta_plot(self,
-                                 save=False) -> None:
+                                 save=False) -> plt.figure():
         """
 
         Dual plot with rolling Sharpe ratio above, and rolling beta below.
         :param save: True ito save to file.
-        :return: None.
+        :return: Matplotlib figure.
         """
         p1 = self.records.columns.get_loc('pf_sharpe_ratio')
         p2 = self.records.columns.get_loc('rolling_beta')
@@ -56,14 +58,14 @@ class Plot:
                        look_nr=1)
 
         fig.tight_layout()
-        plt.show()
 
         if save:
-            self.save_plot(name=self.bt.pf.pf_id + 'rolling_sharpe_beta_plot.png',
+            self.save_plot(name=self.bt.pf.pf_id + '_rolling_sharpe_beta.png',
                            fig=fig)
+        plt.show()
 
     def drawdowns_plot(self,
-                       save=False) -> None:
+                       save=False) -> plt.figure():
         """
 
         Dual plot with cumulative portfolio returns and benchmark returns above, and drawdowns below.
@@ -81,14 +83,18 @@ class Plot:
         ax1 = plt.subplot(211)
         ax2 = plt.subplot(212)
 
-        self.bt.pf.records.iloc[:, p1].plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Portfolio')
-        self.bt.pf.records.iloc[:, p2].plot(lw=1, color='green', alpha=0.60, ax=ax1, label='Benchmark')
-        self.bt.pf.records.iloc[:, p3].plot(lw=1, color='black', alpha=0.60, ax=ax2, label='Drawdowns')
+        pf_cum_rets_pct = self.bt.pf.records.iloc[:, p1] * 100
+        bm_cum_rets_pct = self.bt.pf.records.iloc[:, p2] * 100
+        dd_pct = self.bt.pf.records.iloc[:, p3]
+
+        pf_cum_rets_pct.plot(lw=1, color='black', alpha=0.60, ax=ax1, label='Portfolio')
+        bm_cum_rets_pct.plot(lw=1, color='green', alpha=0.60, ax=ax1, label='Benchmark')
+        dd_pct.plot(lw=1, color='black', alpha=0.60, ax=ax2, label='Drawdowns')
 
         ax1.set_xlabel('Date')
         ax1.set_ylabel('%')
-        pf_tot_rets = str(format(self.records['pf_cum_rets'].iloc[-1], ".2f"))
-        bm_tot_rets = str(format(self.records['bm_cum_rets'].iloc[-1], ".2f"))
+        pf_tot_rets = str(format(pf_cum_rets_pct.iloc[-1], ".2f"))
+        bm_tot_rets = str(format(bm_cum_rets_pct.iloc[-1], ".2f"))
 
         # Include strategy name in title
         title_str = 'Cumulative returns (Portfolio: ' + pf_tot_rets + '%, Benchmark: ' + bm_tot_rets + '%)'
@@ -108,21 +114,30 @@ class Plot:
                        look_nr=1)
 
         fig.tight_layout()
-        plt.show()
 
         if save:
-            self.save_plot(name=self.bt.pf.pf_id + 'drawdown_plot.png',
+            self.save_plot(name=self.bt.pf.pf_id + '_drawdowns.png',
                            fig=fig)
+        plt.show()
 
     @staticmethod
     def plot_look(ax: plt.subplots,
                   look_nr: int):
+        """
+
+        Set plot look.
+        :param ax: Matplotlib ax object.
+        :param look_nr: Desired look as number. More to be implemented.
+        :return:
+        """
         if look_nr == 1:
             ax.minorticks_on()
             ax.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
             ax.grid(b=True, which='major', color='#999999', linestyle='-', alpha=0.4)
             ax.legend(loc='best', prop={'size': 8})
             plt.setp(ax.get_xticklabels(), visible=True, rotation=45, ha='center')
+        else:
+            logger.warning('Plot look number ' + str(look_nr) + ' is not implemented.')
 
     def aggr_rets(self,
                   rets: pd.DataFrame,
@@ -140,24 +155,27 @@ class Plot:
         if period == 'weekly':
             return rets.groupby(
                 [lambda x: x.year,
-                 lambda x: x.month,
-                 lambda x: x.isocalendar()[1]]).apply(cumulate_rets)
+                 lambda x: x.isocalendar()[1]]).apply(cumulate_rets) * 100
         elif period == 'monthly':
             return rets.groupby(
-                [lambda x: x.year, lambda x: x.month]).apply(cumulate_rets)
+                [lambda x: x.year, lambda x: x.month]).apply(cumulate_rets) * 100
         elif period == 'yearly':
             return rets.groupby(
-                [lambda x: x.year]).apply(cumulate_rets)
+                [lambda x: x.year]).apply(cumulate_rets) * 100
         else:
             logger.critical('Chosen aggregated period "' + period + '" is not implemented. Aborted.')
             quit()
 
-    def returns_hm(self) -> plt.axis:
+    def returns_hm(self,
+                   ax: plt.axes,
+                   period: str) -> plt.axis:
         """
 
-        Calculate monthly returns as a Seaborn heatmap.
+        Calculate period returns as a Seaborn heatmap.
         Requires Metrics.calc_returns() to have been run.
-        :return: Matplotlib axis.
+        :param period: "yearly", "monthly" or "weekly".
+        :param ax: Matplotlib axes object to plot on.
+        :return: Matplotlib axes.
         """
         # Get data from backtest results.
         df = self.bt.pf.records.copy()
@@ -168,43 +186,221 @@ class Plot:
                      inplace=True)
 
         rets = df['pf_1d_pct_rets']
-        ax = plt.gca()
+        if ax is None:
+            ax = plt.gca()
 
         # Use help function for aggregation.
-        monthly_rets = self.aggr_rets(rets=rets,
-                                      period='monthly')
-        monthly_rets = monthly_rets.unstack()
-        monthly_rets = np.round(monthly_rets, 3)
+        aggr_rets = self.aggr_rets(rets=rets,
+                                   period=period)
 
-        # Rename month names.
-        monthly_rets.rename(
-            columns={1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
-                     5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
-                     9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'},
-            inplace=True
-        )
+        aggr_rets = np.round(aggr_rets, 3)
+        frame = pd.DataFrame(aggr_rets) * 100
 
-        # Create Seaborn heatmap and set look.
-        sns.heatmap(
-            monthly_rets.fillna(0) * 100.0,
-            annot=True,
-            fmt="0.1f",
-            annot_kws={"size": 8},
-            alpha=1.0,
-            center=0.0,
-            cbar=False,
-            cmap=cm.RdYlGn,
-            ax=ax)
-        ax.set_title('Monthly Returns (%)')
-        ax.set_ylabel('')
-        ax.set_yticklabels(ax.get_yticklabels(), rotation=0)
-        ax.set_xlabel('')
+        # Rename column names.
+        if period == 'monthly':
+            frame = aggr_rets.unstack()
+            frame.rename(
+                columns={1: 'Jan', 2: 'Feb', 3: 'Mar', 4: 'Apr',
+                         5: 'May', 6: 'Jun', 7: 'Jul', 8: 'Aug',
+                         9: 'Sep', 10: 'Oct', 11: 'Nov', 12: 'Dec'},
+                inplace=True
+            )
+            sns.heatmap(
+                frame,
+                fmt="0.1f",
+                annot=True,
+                annot_kws={"size": 4},
+                alpha=1.0,
+                center=0.0,
+                cbar=False,
+                cmap=cm.RdYlGn,
+                square=True,
+                linewidths=1,
+                ax=ax)
+
+        else:
+            anotate_str = True
+            x_ticks_str = False
+            if period == 'weekly':
+                frame = aggr_rets.unstack()
+                anotate_str = False
+                x_ticks_str = True
+            sns.heatmap(
+                frame,
+                fmt="0.1f",
+                annot=anotate_str,
+                xticklabels=x_ticks_str,
+                annot_kws={"size": 6},
+                alpha=1.0,
+                center=0.0,
+                cbar=False,
+                cmap=cm.RdYlGn,
+                square=True,
+                linewidths=1,
+                ax=ax)
+
+        rot = 0
+        if period == 'yearly':
+            title_str = 'Yearly returns (%)'
+            y_lbl_str = 'Year'
+            x_lbl_str = ''
+
+        elif period == 'monthly':
+            title_str = 'Monthly returns (%)'
+            x_lbl_str = 'Month'
+            y_lbl_str = 'Year'
+        else:
+            title_str = 'Weekly returns (%)'
+            x_lbl_str = 'Week'
+            y_lbl_str = 'Year'
+            rot = 90
+        ax.set_title(title_str)
+        ax.set_ylabel(y_lbl_str,
+                      fontsize=8)
+        ax.set_xlabel(xlabel=x_lbl_str,
+                      fontsize=8)
+        ax.set_yticklabels(ax.get_yticklabels(),
+                           rotation=0,
+                           fontsize=6)
+        ax.set_xticklabels(ax.get_xticklabels(),
+                           rotation=rot,
+                           fontsize=6)
 
         return ax
+
+    def create_tear_sheet(self,
+                          save=False) -> None:
+        """
+
+        Create yearly, monthly and weekly heatmap plots in one sheet.
+        :param save: Boolean, True to save as .png.
+        :return: None.
+        """
+        fig = plt.figure()
+        gs = gridspec.GridSpec(2, 2)
+        ax_yearly = plt.subplot(gs[0, 0])
+        ax_monthly = plt.subplot(gs[0, 1])
+        ax_weekly = plt.subplot(gs[1, :])
+        self.returns_hm(ax=ax_yearly,
+                        period='yearly')
+        self.returns_hm(ax=ax_monthly,
+                        period='monthly')
+        self.returns_hm(ax=ax_weekly,
+                        period='weekly')
+
+        fig.suptitle('Period returns and metrics', fontsize=16)
+        fig.tight_layout()
+
+        if save:
+            self.save_plot(name=self.bt.pf.pf_id + '_tear_sheet.png',
+                           fig=fig)
+
+        plt.show()
+
+    def plot_text(self,
+                  save=False) -> None:
+        """
+
+        Create a summary sheet of portfolio and benchmark metrics.
+        :param save: Boolean, True to save as .png.
+        :return: None.
+        """
+        def format_perc(x) -> float:
+            """
+
+            Percentage formatter.
+            :param x: Number to be formatted.
+            :return: Two decimal percentage number.
+            """
+            return '%.2f%%' % x
+
+        def format_ratio(x) -> str:
+            """
+
+            Ratio formatter.
+            :param x: Number to be formatted.
+            :return: Two decimal ration number.
+            """
+            return format(x, '.2f')
+
+        ax = plt.gca()
+
+        ax.set_title('Backtesting results for strategy: ' + self.bt.strategy.name,
+                     fontweight='bold',
+                     horizontalalignment='center',
+                     fontsize=8,
+                     color='blue')
+
+        # Strategy description.
+        strategy_str = self.bt.strategy.description()
+
+        ax.text(0,
+                9.4,
+                'Strategy description',
+                horizontalalignment='left',
+                fontweight='bold',
+                fontsize=7)
+
+        ax.text(0,
+                7,
+                strategy_str,
+                horizontalalignment='left',
+                fontsize=6)
+
+        # Backtesting info.
+        bt_str = ''
+        bt_data = {'Start date': self.bt.start_date,
+                   'End date': self.bt.end_date,
+                   'Total returns': str(format_perc(self.bt.metric.calc_tot_pf_rets(self.bt.pf) * 100)),
+                   'Benchmark returns': str(format_perc(self.bt.metric.calc_tot_bm_rets(self.bt.pf) * 100)),
+                   'CAGR': str(format_ratio(self.bt.metric.calc_cagr(self.bt.pf))),
+                   'Sortino ratio': str(format_ratio(self.bt.metric.calc_sortino_ratio(self.bt.pf))),
+                   'Sharpe ratio': str(format_ratio(self.bt.metric.calc_sharpe_ratio(self.bt.pf)))
+                   }
+
+        for key, item in bt_data.items():
+            bt_str = bt_str + key + ': ' + item + '\n\n'
+
+        ax.text(8,
+                9.4,
+                'Backtesting results',
+                horizontalalignment='left',
+                fontweight='bold',
+                fontsize=7)
+
+        ax.text(8,
+                4.75,
+                bt_str,
+                horizontalalignment='left',
+                fontsize=6)
+
+        ax.grid(False)
+        ax.spines['top'].set_linewidth(1.0)
+        ax.spines['bottom'].set_linewidth(1.0)
+        ax.spines['right'].set_visible(False)
+        ax.spines['left'].set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        ax.get_xaxis().set_visible(False)
+        ax.set_ylabel('')
+        ax.set_xlabel('')
+
+        ax.axis([0, 10, 0, 10])
+
+        if save:
+            self.save_plot(name=self.bt.pf.pf_id + '_tear_sheet.png',
+                           fig=ax)
+        plt.show()
 
     def save_plot(self,
                   name: str,
                   fig) -> None:
+        """
+
+        Save file as .png in /output_files directory.
+        :param name: File name.
+        :param fig: Figure to be save.
+        :return: None.
+        """
         file_name = self.save_location + '/' + name
         try:
             fig.savefig(file_name,

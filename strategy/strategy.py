@@ -18,6 +18,10 @@ class Strategy(metaclass=abc.ABCMeta):
                     pf: Portfolio):
         pass
 
+    @abc.abstractmethod
+    def description(self):
+        pass
+
 
 class PeriodicRebalancing(Strategy):
     """
@@ -126,3 +130,24 @@ class PeriodicRebalancing(Strategy):
                 trans_ev = Transaction(date=pf.current_date,
                                        trans=trans)
                 events.put(item=trans_ev)
+
+    def description(self) -> str:
+        """
+
+        Get {position name: weight} as string with line break in between.
+        :return: String.
+        """
+        p = ''
+        if self.period in ['som', 'eom', 'sow', 'eow']:
+            if self.period == 'sow':
+                p = 'start-of-week'
+            elif self.period == 'eow':
+                p = 'end-of-week'
+            elif self.period == 'som':
+                p = 'start-of-month'
+            else:
+                p = 'end-of-month'
+        desc_str = 'Periodic re-balancing at ' + p + ':' + '\n\n'
+        for key, item in self.id_weight.items():
+            desc_str = desc_str + key + ': ' + str(100 * float(item)) + ' %' + '\n\n'
+        return desc_str

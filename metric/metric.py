@@ -44,7 +44,7 @@ class Metric:
         col_idx = pf.records.columns.get_loc('pf_1d_pct_rets')
         pf.records.iloc[0, col_idx] = pf.records['total_market_value'].iloc[0] / pf.init_cash - 1
         pf.records['pf_cum_rets'] = np.cumprod(1 + pf.records['pf_1d_pct_rets']) - 1
-        pf.records.loc[:, 'pf_cum_rets'] *= 100
+        # pf.records.loc[:, 'pf_cum_rets'] *= 100
 
         # If benchmark exists
         if pf.benchmark == '':
@@ -54,7 +54,7 @@ class Metric:
             col_idx = pf.records.columns.get_loc('bm_1d_pct_rets')
             pf.records.iloc[0, col_idx] = 0
             pf.records['bm_cum_rets'] = np.cumprod(1 + pf.records['bm_1d_pct_rets']) - 1
-            pf.records.loc[:, 'bm_cum_rets'] *= 100
+            # pf.records.loc[:, 'bm_cum_rets'] *= 100
         pf.records.set_index('current_date', inplace=True)
         pf.records.fillna(0, inplace=True)
         logger.info('Metrics calculated for returns.')
@@ -63,14 +63,14 @@ class Metric:
     def create_drawdowns(pf: Portfolio):
         """
 
-        Calculates maximum drawdown and maximum drawdown duration.
+        Calculates drawdown and drawdown duration.
         Maximum drawdown is the largest peak-to-trough drop.
         Maximum drawdown duration is defined as the number of periods over which the maximum drawdown occurs.
         :param pf: Portfolio object.
         :return: None.
         """
         high_water_mark = [0]
-        equity_curve = pf.records['total_market_value']
+        equity_curve = pf.records['pf_cum_rets']
         eq_idx = pf.records.index
         drawdown = pd.Series(index=eq_idx)
         duration = pd.Series(index=eq_idx)
@@ -78,13 +78,41 @@ class Metric:
         for t in range(1, len(eq_idx)):
             cur_hwm = max(high_water_mark[t - 1], equity_curve[t])
             high_water_mark.append(cur_hwm)
-            drawdown[t] = (equity_curve[t] / high_water_mark[t] - 1) * 100
+            if t == 1:
+                drawdown[t] = 0
+            else:
+                if high_water_mark[t] == 0:
+                    drawdown[t] = 0
+                else:
+                    drawdown[t] = (equity_curve[t] / high_water_mark[t] - 1)
             duration[t] = 0 if drawdown[t] == 0 else duration[t - 1] + 1
         pf.records['drawdown'] = drawdown
         pf.records['duration'] = duration
         pf.records['drawdown'].fillna(0, inplace=True)
         pf.records['duration'].fillna(0, inplace=True)
         logger.info('Metrics calculated for drawdowns.')
+
+    @staticmethod
+    def max_drawdown(pf: Portfolio) -> float:
+        """
+
+        Calculate maximum drawdown in percent.
+        Requires that metrics.create_drawdowns() has been run.
+        :param pf: Portfolio.
+        :return: Maximum drawdown value in percent.
+        """
+        return pf.records['drawdown'].min()
+
+    @staticmethod
+    def max_drawdown_duration(pf: Portfolio) -> float:
+        """
+
+        Calculate maximum drawdown duration in days.
+        Requires that metrics.create_drawdowns() has been run.
+        :param pf: Portfolio.
+        :return: Maximum drawdown duration in days.
+        """
+        return pf.records['duration'].max()
 
     def create_rolling_sharpe_ratio(self,
                                     pf: Portfolio) -> None:
@@ -170,6 +198,8 @@ class Metric:
         self.create_drawdowns(pf=pf)
         self.create_rolling_sharpe_ratio(pf=pf)
         self.create_rolling_beta(pf=pf)
+        self.calc_cagr(pf=pf)
+        self.calc_sortino_ratio(pf=pf)
 
     def calc_cagr(self,
                   pf: Portfolio) -> float:
@@ -207,6 +237,12 @@ class Metric:
 
     def calc_sortino_ratio(self,
                            pf: Portfolio) -> float:
+        """
+
+        Calculate Sortino ratio for portfolio.
+        :param pf:Portfolio object.
+        :return: Sortino ratio.
+        """
         # Get data from backtest results.
         df = pf.records.copy()
         df['dt'] = pd.to_datetime(df.index,
@@ -218,3 +254,34 @@ class Metric:
         rets = df['pf_1d_pct_rets']
 
         return np.sqrt(float(self.sortino_ratio_period)) * (np.mean(rets)) / np.std(rets[rets < 0])
+
+    def calc_tot_pf_rets(self,
+                         pf: Portfolio) -> float:
+        """
+
+        Get total returns for portfolio in backtest.
+        :param pf: Portfolio object.
+        :return: Portfolio returns in decimal format.
+        """
+        # Get data from backtest results.
+        p1 = pf.records.columns.get_loc('pf_cum_rets')
+        pf_cum_rets_pct = pf.records.iloc[:, p1]
+
+        return pf_cum_rets_pct.iloc[-1]
+
+    def calc_tot_bm_rets(self,
+                         pf: Portfolio) -> float:
+        """
+
+        Get total returns for benchmark in backtest.
+        :param pf: Portfolio object.
+        :return: Benchmark returns in decimal format.
+        """
+        if pf.benchmark is None:
+            logger.critical('No benchmark for portfolio. Check portfolio_config.ini file. Aborted.')
+            quit()
+        # Get data from backtest results.
+        p1 = pf.records.columns.get_loc('bm_cum_rets')
+        pf_cum_rets_pct = pf.records.iloc[:, p1]
+
+        return pf_cum_rets_pct.iloc[-1]
