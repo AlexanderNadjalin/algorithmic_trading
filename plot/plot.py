@@ -123,12 +123,21 @@ class Plot:
     @staticmethod
     def plot_look(ax: plt.subplots,
                   look_nr: int):
+        """
+
+        Set plot look.
+        :param ax: Matplotlib ax object.
+        :param look_nr: Desired look as number. More to be implemented.
+        :return:
+        """
         if look_nr == 1:
             ax.minorticks_on()
             ax.grid(b=True, which='minor', color='#999999', linestyle='-', alpha=0.2)
             ax.grid(b=True, which='major', color='#999999', linestyle='-', alpha=0.4)
             ax.legend(loc='best', prop={'size': 8})
             plt.setp(ax.get_xticklabels(), visible=True, rotation=45, ha='center')
+        else:
+            logger.warning('Plot look number ' + str(look_nr) + ' is not implemented.')
 
     def aggr_rets(self,
                   rets: pd.DataFrame,
@@ -260,7 +269,13 @@ class Plot:
         return ax
 
     def create_tear_sheet(self,
-                          save=False):
+                          save=False) -> None:
+        """
+
+        Create yearly, monthly and weekly heatmap plots in one sheet.
+        :param save: Boolean, True to save as .png.
+        :return: None.
+        """
         fig = plt.figure()
         gs = gridspec.GridSpec(2, 2)
         ax_yearly = plt.subplot(gs[0, 0])
@@ -283,23 +298,85 @@ class Plot:
         plt.show()
 
     def plot_text(self,
-                  save=False):
-        def format_perc(x, pos):
-            return '%.0f%%' % x
+                  save=False) -> None:
+        """
+
+        Create a summary sheet of portfolio and benchmark metrics.
+        :param save: Boolean, True to save as .png.
+        :return: None.
+        """
+        def format_perc(x) -> float:
+            """
+
+            Percentage formatter.
+            :param x: Number to be formatted.
+            :return: Two decimal percentage number.
+            """
+            return '%.2f%%' % x
+
+        def format_ratio(x) -> str:
+            """
+
+            Ratio formatter.
+            :param x: Number to be formatted.
+            :return: Two decimal ration number.
+            """
+            return format(x, '.2f')
 
         ax = plt.gca()
 
-        ax.text(2,
-                11,
-                self.bt.strategy.name,
+        ax.set_title('Backtesting results for strategy: ' + self.bt.strategy.name,
+                     fontweight='bold',
+                     horizontalalignment='center',
+                     fontsize=8,
+                     color='blue')
+
+        # Strategy description.
+        strategy_str = self.bt.strategy.description()
+
+        ax.text(0,
+                9.4,
+                'Strategy description',
+                horizontalalignment='left',
                 fontweight='bold',
-                horizontalalignment='right',
-                fontsize=8,
-                color='green')
+                fontsize=7)
+
+        ax.text(0,
+                7,
+                strategy_str,
+                horizontalalignment='left',
+                fontsize=6)
+
+        # Backtesting info.
+        bt_str = ''
+        bt_data = {'Start date': self.bt.start_date,
+                   'End date': self.bt.end_date,
+                   'Total returns': str(format_perc(self.bt.metric.calc_tot_pf_rets(self.bt.pf) * 100)),
+                   'Benchmark returns': str(format_perc(self.bt.metric.calc_tot_bm_rets(self.bt.pf) * 100)),
+                   'CAGR': str(format_ratio(self.bt.metric.calc_cagr(self.bt.pf))),
+                   'Sortino ratio': str(format_ratio(self.bt.metric.calc_sortino_ratio(self.bt.pf))),
+                   'Sharpe ratio': str(format_ratio(self.bt.metric.calc_sharpe_ratio(self.bt.pf)))
+                   }
+
+        for key, item in bt_data.items():
+            bt_str = bt_str + key + ': ' + item + '\n\n'
+
+        ax.text(8,
+                9.4,
+                'Backtesting results',
+                horizontalalignment='left',
+                fontweight='bold',
+                fontsize=7)
+
+        ax.text(8,
+                4.75,
+                bt_str,
+                horizontalalignment='left',
+                fontsize=6)
 
         ax.grid(False)
-        ax.spines['top'].set_linewidth(2.0)
-        ax.spines['bottom'].set_linewidth(2.0)
+        ax.spines['top'].set_linewidth(1.0)
+        ax.spines['bottom'].set_linewidth(1.0)
         ax.spines['right'].set_visible(False)
         ax.spines['left'].set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -317,6 +394,13 @@ class Plot:
     def save_plot(self,
                   name: str,
                   fig) -> None:
+        """
+
+        Save file as .png in /output_files directory.
+        :param name: File name.
+        :param fig: Figure to be save.
+        :return: None.
+        """
         file_name = self.save_location + '/' + name
         try:
             fig.savefig(file_name,

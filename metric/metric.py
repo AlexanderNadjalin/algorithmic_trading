@@ -237,6 +237,12 @@ class Metric:
 
     def calc_sortino_ratio(self,
                            pf: Portfolio) -> float:
+        """
+
+        Calculate Sortino ratio for portfolio.
+        :param pf:Portfolio object.
+        :return: Sortino ratio.
+        """
         # Get data from backtest results.
         df = pf.records.copy()
         df['dt'] = pd.to_datetime(df.index,
@@ -260,6 +266,7 @@ class Metric:
         # Get data from backtest results.
         p1 = pf.records.columns.get_loc('pf_cum_rets')
         pf_cum_rets_pct = pf.records.iloc[:, p1]
+
         return pf_cum_rets_pct.iloc[-1]
 
     def calc_tot_bm_rets(self,
@@ -276,4 +283,5 @@ class Metric:
         # Get data from backtest results.
         p1 = pf.records.columns.get_loc('bm_cum_rets')
         pf_cum_rets_pct = pf.records.iloc[:, p1]
+
         return pf_cum_rets_pct.iloc[-1]

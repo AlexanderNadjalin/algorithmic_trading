@@ -15,7 +15,8 @@ def dev():
     pf = Portfolio(inception_date='2017-07-27')
 
     s = PeriodicRebalancing(period='som',
-                            id_weight={'XACTOMXS30.ST': 0.99})
+                            id_weight={'XACTOMXS30.ST': 0.89,
+                            'SXRT.TG': 0.1})
 
     bt = Backtest(market=market,
                   pf=pf,
