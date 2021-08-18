@@ -18,6 +18,8 @@ market = Market(market_file_name=market_file_name,
                 fill_missing_method='forward')
 ```
 
+### Portfolio
+
 Next we create the portfolio which will hold all trade details and history. The portfolio object reads the portofolio_config.ini file containing static information about it:
 
 ```
@@ -28,7 +30,7 @@ commission_scheme = ''
 init_cash = 100000.0
 
 [benchmark]
-benchmark_name = SXRT.TG
+benchmark_name = .OMXS30
 
 [portfolio_information]
 currency = SEK
@@ -43,11 +45,15 @@ Creating the portfolio object:
 pf = Portfolio(inception_date='2017-07-27')
 ```
 
-We need to define a strategy containing rules for buying and selling. In this case, we'll use a monthly re-balancing scheme at the start of the month. At each first busines day of the month, the strategy will re-balance its holdings to contain the following securities with thie respective weights:
+### Strategy
+
+We need to define a strategy containing rules for buying and selling. In this case, we'll use a monthly re-balancing scheme at the start of the month. At each first busines day of the month, the strategy will re-balance its holdings to contain the following securities with the respective weights:
 
 * XACTOMXS30.ST at 89%
-* SXRT.TG       at 1%
-* cash          at 10%
+* SXRT.TG       at 10%
+* cash          at 1%
+
+This weighting scheme is just an example.
 
 ```
 s = PeriodicRebalancing(period='som',
@@ -55,13 +61,79 @@ s = PeriodicRebalancing(period='som',
                         'SXRT.TG': 0.1})
 ```
 
+### The backtest
 
+Next we set up the backtest, add our strategy and run the whole thing.
 
-# Structure
+```
+bt = Backtest(market=market,
+              pf=pf,
+              start_date=pf.inception_date,
+              end_date='2021-07-02')
 
+# Add strategy to backtest and run.
+bt.add_strategy(strategy=s)
+bt.run()
+```
 
-## Data
+### Calculated metrics
 
+In the metric_config.ini file, we define the parameters used for all our calculations regarding risk and performace:
+
+```
+[rolling_beta]
+period = 252
+
+[rolling_sharpe_ratio]
+period = 252
+
+[sharpe_ratio]
+period = 252
+
+[sortino_ratio]
+period = 252
+```
+
+The last command, `bt.run()`, runs the backtest between the desired dates, excuting the strategy as per its definition. The core of the function is a Python queque which handles events of different types such as "MARKET", "TRANSACTION" etc. Each day counts as a new event where the strategy evaluates market data and positions. If the strategy decides that a transaction should be made, it adds a "TRANSACTION" event to the queue.
+
+The function lastly calculates all performance and risk measurements.
+
+### Results
+
+We can now see the reults in the form of a few plots and some metrics.
+
+First we se the strategy's cummulative performance and its drawdown statistics.
+
+<img width="700" src="/output_files/pf01_drawdowns.png" />
+
+***
+
+Return heatmaps for different periods:
+
+<img width="700" src="/output_files/pf01_return_heatmaps.png" />
+
+***
+
+Rolling Sharpe ratio and beta:
+
+<img width="700" src="/output_files/pf01_rolling_sharpe_beta.png" />
+
+***
+
+A simple tear sheet with various metrics added in one place:
+
+<img width="700" src="/output_files/pf01_tear_sheet.png" />
+
+***
+The code for producing these four plots are straight forward:
+
+```
+p = Plot(bt=bt)
+p.drawdowns_plot(save=True)
+p.periodic_returns(save=True)
+p.rolling_sharpe_beta_plot(save=True)
+p.plot_text(save=True)
+```
 
 # Further improvements
 Several areas of improvement exists, some of which are listed below.
@@ -71,6 +143,10 @@ Several areas of improvement exists, some of which are listed below.
 * Support for multi-currency portfolios.
 * Support for intraday markets data and transactions.
 * Added risk metrics such as Value-at-Risk (VaR), Expected Shortfall (ES) etc.
+
+Other itmes:
+
+* Complete documentation and examples.
 
 
 # License
