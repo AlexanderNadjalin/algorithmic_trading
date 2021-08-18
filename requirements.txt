@@ -1,0 +1,5 @@
+matplotlib~=3.4.2
+seaborn~=0.11.1
+pandas~=1.2.5
+numpy~=1.21.0
+loguru~=0.5.3

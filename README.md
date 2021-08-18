@@ -1,1 +1,10 @@
-algorithmic_trading
+# About
+
+
+# Structure
+
+
+## Data
+
+
+## Further improvements
