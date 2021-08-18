@@ -288,7 +288,8 @@ class Plot:
         self.returns_hm(ax=ax_weekly,
                         period='weekly')
 
-        fig.suptitle('Period returns and metrics', fontsize=16)
+        fig.suptitle('Period returns and metrics',
+                     fontsize=16)
         fig.tight_layout()
 
         if save:

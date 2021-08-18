@@ -19,7 +19,7 @@ def dev():
     # Strategy.
     s = PeriodicRebalancing(period='som',
                             id_weight={'XACTOMXS30.ST': 0.89,
-                            'SXRT.TG': 0.1})
+                                       'SXRT.TG': 0.1})
 
     # Backtest.
     bt = Backtest(market=market,
