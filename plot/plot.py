@@ -194,7 +194,7 @@ class Plot:
                                    period=period)
 
         aggr_rets = np.round(aggr_rets, 3)
-        frame = pd.DataFrame(aggr_rets) * 100
+        frame = pd.DataFrame(aggr_rets)
 
         # Rename column names.
         if period == 'monthly':
@@ -268,8 +268,8 @@ class Plot:
 
         return ax
 
-    def create_tear_sheet(self,
-                          save=False) -> None:
+    def periodic_returns(self,
+                         save=False) -> None:
         """
 
         Create yearly, monthly and weekly heatmap plots in one sheet.
@@ -292,7 +292,7 @@ class Plot:
         fig.tight_layout()
 
         if save:
-            self.save_plot(name=self.bt.pf.pf_id + '_tear_sheet.png',
+            self.save_plot(name=self.bt.pf.pf_id + '_return_heatmaps.png',
                            fig=fig)
 
         plt.show()
@@ -403,8 +403,8 @@ class Plot:
         """
         file_name = self.save_location + '/' + name
         try:
-            fig.savefig(file_name,
-                        bbox_inches='tight')
+            fig.figure.savefig(file_name,
+                               bbox_inches='tight')
             logger.success('Plot saved at: ' + file_name + '.')
         except FileNotFoundError:
             logger.warning('File destination incorrect. Check backtest_config.ini file. Plot not saved.')

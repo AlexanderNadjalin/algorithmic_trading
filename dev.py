@@ -5,16 +5,16 @@ from strategy.strategy import PeriodicRebalancing
 from plot.plot import Plot
 
 
-market_file_ane = 'test_data_ETF.csv'
+market_file_name = 'test_data_ETF.csv'
 
 
 def dev():
     # Market data.
-    market = Market(market_file_name=market_file_ane,
+    market = Market(market_file_name=market_file_name,
                     fill_missing_method='forward')
 
     # Portfolio.
-    pf = Portfolio(inception_date='2017-07-27')
+    pf = Portfolio(inception_date='2017-09-08')
 
     # Strategy.
     s = PeriodicRebalancing(period='som',
@@ -33,10 +33,10 @@ def dev():
 
     # Plot results.
     p = Plot(bt=bt)
-    p.plot_text()
-    p.drawdowns_plot()
-    p.rolling_sharpe_beta_plot()
-    p.create_tear_sheet()
+    p.plot_text(save=True)
+    p.drawdowns_plot(save=True)
+    p.rolling_sharpe_beta_plot(save=True)
+    p.periodic_returns(save=True)
 
 
 if __name__ == '__main__':
